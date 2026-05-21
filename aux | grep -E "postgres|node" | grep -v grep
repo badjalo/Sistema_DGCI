@@ -1,0 +1,5 @@
+                  id                  |      nome       |      email       | ativo |                        password_hash                         
+--------------------------------------+-----------------+------------------+-------+--------------------------------------------------------------
+ f27522b1-2356-42f8-a31e-d1d9f1f713ae | Mamadú Bá Djaló | admin@sf-dgci.gw | t     | $2a$12$xUW0BwtfgiMwbZgr7/o2G.QL83NmMeZxAF0qml5jkbx//ASTnSJ9a
+(1 row)
+
