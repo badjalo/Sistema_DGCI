@@ -121,7 +121,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="btn-primary w-full mt-8 py-3 text-base font-semibold"
+              className="btn btn-primary w-full mt-8 py-3 text-base font-semibold"
             >
               {isSubmitting ? (
                 <div className="spinner" style={{ width: '18px', height: '18px', borderLeftColor: 'white' }}></div>

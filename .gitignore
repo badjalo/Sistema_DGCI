@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Uploaded files (runtime)
+backend/uploads/fotos/*
+backend/uploads/recibos/*
+backend/uploads/documentos/*
+!backend/uploads/fotos/.gitkeep
+!backend/uploads/recibos/.gitkeep
+!backend/uploads/documentos/.gitkeep
+
+# Temp files
+backend/tmp_*.pdf

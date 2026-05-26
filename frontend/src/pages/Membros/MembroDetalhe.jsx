@@ -26,27 +26,8 @@ const MembroDetalhe = () => {
     fetchMembro();
   }, [id]);
 
-  const handleVerCartao = async () => {
-    try {
-      const response = await api.get(`/membros/${id}/cartao`, {
-        responseType: 'blob',
-        headers: {
-          'Content-Type': 'application/pdf'
-        }
-      });
-      const url = window.URL.createObjectURL(response.data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `cartao_${membro.numero_membro}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success('Cartão descarregado com sucesso!');
-    } catch (error) {
-      console.error('Erro ao descarregar cartão:', error);
-      toast.error(error.response?.data?.error || 'Erro ao descarregar cartão');
-    }
+  const handleVerCartao = () => {
+    navigate(`/membros/${id}/cartao`);
   };
 
   const handleEditarPerfil = () => {
@@ -80,7 +61,7 @@ const MembroDetalhe = () => {
       </div>
 
       {/* Card Principal do Membro */}
-      <div className="card card-member">
+      <div className="card">
         <div className="flex gap-6">
           {/* Avatar */}
           <div className="flex flex-col items-center">

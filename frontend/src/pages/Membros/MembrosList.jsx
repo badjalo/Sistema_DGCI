@@ -1,225 +1,237 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import { Users, Search, Plus, Filter, MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
+import { Users, Search, Plus, Filter, Edit2, Trash2, Eye, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+const estadoBadge = (estado) => {
+  const map = {
+    ativo:     'badge-success',
+    suspenso:  'badge-danger',
+    reformado: 'badge-neutral',
+    inativo:   'badge-neutral',
+  };
+  return map[estado] || 'badge-neutral';
+};
+
 const MembrosList = () => {
-  const [membros, setMembros] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [membros, setMembros]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [search, setSearch]         = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
 
-  const fetchMembros = async () => {
+  const fetchMembros = async (page = pagination.page) => {
     setLoading(true);
     try {
       const { data } = await api.get('/membros', {
-        params: { page: pagination.page, limit: pagination.limit, search, estado: estadoFilter }
+        params: { page, limit: pagination.limit, search, estado: estadoFilter }
       });
       setMembros(data.data);
       setPagination(data.pagination);
-    } catch (error) {
+    } catch {
       toast.error('Erro ao carregar membros');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { fetchMembros(1); }, [estadoFilter]);
   useEffect(() => {
-    fetchMembros();
-  }, [pagination.page, estadoFilter]);
-
-  // Debounced search
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (pagination.page !== 1) {
-        setPagination(prev => ({ ...prev, page: 1 }));
-      } else {
-        fetchMembros();
-      }
-    }, 500);
-    return () => clearTimeout(timeoutId);
+    const t = setTimeout(() => fetchMembros(1), 450);
+    return () => clearTimeout(t);
   }, [search]);
+  useEffect(() => { fetchMembros(); }, [pagination.page]);
 
   const handleDelete = async (id, nome) => {
-    if (window.confirm(`Tem certeza que deseja eliminar o membro ${nome}?`)) {
-      try {
-        await api.delete(`/membros/${id}`);
-        toast.success('Membro eliminado com sucesso');
-        fetchMembros();
-      } catch (error) {
-        toast.error(error.response?.data?.error || 'Erro ao eliminar membro');
-      }
+    if (!window.confirm(`Eliminar o membro "${nome}"?`)) return;
+    try {
+      await api.delete(`/membros/${id}`);
+      toast.success('Membro eliminado com sucesso');
+      fetchMembros();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao eliminar membro');
     }
   };
 
   return (
-    <div className="fade-in space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="fade-in space-y-5">
+
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#0f2043] flex items-center gap-2">
-            <Users size={28} className="text-blue-600" />
+          <h1 className="text-2xl font-extrabold flex items-center gap-2"
+              style={{ color: 'var(--text-1)', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+            <Users size={24} style={{ color: 'var(--primary)' }} />
             Gestão de Membros
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {pagination.total} membros registados no sindicato
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
+            {pagination.total} membros registados no sistema
           </p>
         </div>
-        <Link to="/membros/novo" className="btn btn-primary w-full md:w-auto">
-          <Plus size={18} /> Novo Membro
+        <Link to="/membros/novo" className="btn btn-primary btn-sm sm:btn">
+          <Plus size={16} /> Novo Membro
         </Link>
       </div>
 
-      <div className="card">
-        {/* Filters and Search */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+      {/* Filters */}
+      <div className="card py-3 px-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
             <input
               type="text"
               placeholder="Pesquisar por nome, nº membro, NIF..."
-              className="form-control pl-12"
+              className="form-control"
+              style={{ paddingLeft: '2.25rem' }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
-            <div className="relative min-w-[150px]">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <select
-                className="form-control pl-12 appearance-none"
-                value={estadoFilter}
-                onChange={(e) => {
-                  setEstadoFilter(e.target.value);
-                  setPagination(prev => ({ ...prev, page: 1 }));
-                }}
-              >
-                <option value="">Todos os Estados</option>
-                <option value="ativo">Ativos</option>
-                <option value="suspenso">Suspensos</option>
-                <option value="reformado">Reformados</option>
-                <option value="inativo">Inativos</option>
-              </select>
-            </div>
+          <div className="relative sm:w-52">
+            <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-3)' }} />
+            <select
+              className="form-control"
+              style={{ paddingLeft: '2.25rem' }}
+              value={estadoFilter}
+              onChange={(e) => {
+                setEstadoFilter(e.target.value);
+                setPagination(p => ({ ...p, page: 1 }));
+              }}
+            >
+              <option value="">Todos os Estados</option>
+              <option value="ativo">Ativos</option>
+              <option value="suspenso">Suspensos</option>
+              <option value="reformado">Reformados</option>
+              <option value="inativo">Inativos</option>
+            </select>
           </div>
         </div>
+      </div>
 
-        {/* Table */}
-        <div className="table-container">
-          <table className="table">
-            <thead>
+      {/* Table */}
+      <div className="table-container">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Membro</th>
+              <th>Contacto</th>
+              <th>Departamento / Cargo</th>
+              <th>Estado</th>
+              <th className="text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
               <tr>
-                <th>Membro</th>
-                <th>Contacto</th>
-                <th>Departamento / Cargo</th>
-                <th>Estado</th>
-                <th className="text-right">Ações</th>
+                <td colSpan="5" className="text-center py-12">
+                  <div className="spinner mx-auto" />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-8">
-                    <div className="spinner mx-auto"></div>
-                  </td>
-                </tr>
-              ) : membros.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-8 text-gray-500">
-                    Nenhum membro encontrado.
-                  </td>
-                </tr>
-              ) : (
-                membros.map((membro) => (
-                  <tr key={membro.id} className="hover:bg-gray-50">
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold shrink-0">
-                          {membro.foto_url ? (
-                            <img src={membro.foto_url} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
-                          ) : (
-                            membro.nome_completo.charAt(0)
+            ) : membros.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-12">
+                  <div className="flex flex-col items-center gap-2">
+                    <Users size={32} style={{ color: 'var(--text-3)' }} />
+                    <p style={{ color: 'var(--text-3)' }}>Nenhum membro encontrado.</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              membros.map((m) => (
+                <tr key={m.id}>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+                        style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}
+                      >
+                        {m.foto_url
+                          ? <img src={m.foto_url} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
+                          : m.nome_completo.charAt(0).toUpperCase()
+                        }
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-1)' }}>
+                          {m.nome_completo}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="text-xs" style={{ color: 'var(--text-3)' }}>{m.numero_membro}</span>
+                          {m.fundo_social && (
+                            <span className="badge badge-primary" style={{ fontSize: '9px', padding: '2px 6px' }}>
+                              <Heart size={9} /> Fundo Social
+                            </span>
                           )}
                         </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{membro.nome_completo}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-gray-500">{membro.numero_membro}</span>
-                            {membro.fundo_social && (
-                              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider scale-95 origin-left">Fundo Social</span>
-                            )}
-                          </div>
-                        </div>
                       </div>
-                    </td>
-                    <td>
-                      <p className="text-sm text-gray-900">{membro.telefone || 'N/A'}</p>
-                      <p className="text-xs text-gray-500">{membro.email || 'N/A'}</p>
-                    </td>
-                    <td>
-                      <p className="text-sm text-gray-900 truncate max-w-[200px]" title={membro.departamento_nome}>
-                        {membro.departamento_nome || 'Sem Departamento'}
-                      </p>
-                      <p className="text-xs text-gray-500">{membro.cargo_nome || membro.funcao_cargo || 'S/ Cargo'}</p>
-                    </td>
-                    <td>
-                      <span className={`badge ${membro.estado === 'ativo' ? 'badge-success' :
-                        membro.estado === 'suspenso' ? 'badge-warning' :
-                          membro.estado === 'reformado' ? 'badge-info' : 'badge-neutral'
-                        }`}>
-                        {membro.estado}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex items-center justify-end gap-2">
-                        <Link to={`/membros/${membro.id}`} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Ver Perfil">
-                          <Eye size={18} />
-                        </Link>
-                        <Link to={`/membros/${membro.id}/editar`} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors" title="Editar">
-                          <Edit2 size={18} />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(membro.id, membro.nome_completo)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {!loading && pagination.pages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-500">
-              Mostrando página <span className="font-medium">{pagination.page}</span> de <span className="font-medium">{pagination.pages}</span>
-            </p>
-            <div className="flex gap-1">
-              <button
-                disabled={pagination.page === 1}
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 hover:bg-gray-50 transition-colors"
-              >
-                Anterior
-              </button>
-              <button
-                disabled={pagination.page === pagination.pages}
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 hover:bg-gray-50 transition-colors"
-              >
-                Próxima
-              </button>
-            </div>
-          </div>
-        )}
+                    </div>
+                  </td>
+                  <td>
+                    <p className="text-sm" style={{ color: 'var(--text-1)' }}>{m.telefone || '—'}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>{m.email || '—'}</p>
+                  </td>
+                  <td>
+                    <p className="text-sm font-medium truncate max-w-[200px]" style={{ color: 'var(--text-1)' }}>
+                      {m.departamento_nome || 'Sem Departamento'}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+                      {m.cargo_nome || m.funcao_cargo || 'S/ Cargo'}
+                    </p>
+                  </td>
+                  <td>
+                    <span className={`badge ${estadoBadge(m.estado)}`}>{m.estado}</span>
+                  </td>
+                  <td>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link to={`/membros/${m.id}`}
+                            className="btn-icon" title="Ver Perfil">
+                        <Eye size={16} style={{ color: 'var(--primary)' }} />
+                      </Link>
+                      <Link to={`/membros/${m.id}/editar`}
+                            className="btn-icon" title="Editar">
+                        <Edit2 size={16} style={{ color: 'var(--text-2)' }} />
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(m.id, m.nome_completo)}
+                        className="btn-icon" title="Eliminar"
+                      >
+                        <Trash2 size={16} style={{ color: 'var(--danger)' }} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {/* Pagination */}
+      {!loading && pagination.pages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+            Página <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{pagination.page}</span> de{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{pagination.pages}</span>
+            {' '}— {pagination.total} total
+          </p>
+          <div className="flex gap-1.5">
+            <button
+              disabled={pagination.page === 1}
+              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+              className="btn btn-outline btn-sm gap-1"
+            >
+              <ChevronLeft size={15} /> Anterior
+            </button>
+            <button
+              disabled={pagination.page === pagination.pages}
+              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+              className="btn btn-outline btn-sm gap-1"
+            >
+              Próxima <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

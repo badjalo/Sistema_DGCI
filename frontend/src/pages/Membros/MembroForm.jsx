@@ -157,7 +157,7 @@ const MembroForm = () => {
                     <span className="font-bold">{formData.nome_completo ? formData.nome_completo.charAt(0).toUpperCase() : 'M'}</span>
                   )}
                 </div>
-                <label className="btn-outline w-full text-center text-sm justify-center cursor-pointer">
+                <label className="btn btn-outline w-full text-center text-sm justify-center cursor-pointer">
                   Carregar Foto
                   <input type="file" name="foto" accept="image/*" onChange={handleChange} className="hidden" />
                 </label>
@@ -302,10 +302,10 @@ const MembroForm = () => {
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4">
-          <button type="button" onClick={() => navigate('/membros')} className="btn-outline">
+          <button type="button" onClick={() => navigate('/membros')} className="btn btn-outline">
             <X size={18} /> Cancelar
           </button>
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn btn-primary">
             {loading ? <div className="spinner w-5 h-5 border-2"></div> : <><Save size={18} /> Registar Membro</>}
           </button>
         </div>
