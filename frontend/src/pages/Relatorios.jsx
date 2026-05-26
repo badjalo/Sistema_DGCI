@@ -36,8 +36,8 @@ const Relatorios = () => {
 
   const reports = [
     { id: 'membros', title: 'Diretório de Membros', desc: 'Exportar lista completa de membros com contactos e cargos.', icon: Users, color: 'text-blue-500', bg: 'bg-blue-100' },
-    { id: 'quotas_divida', title: 'Mapa de Quotas (Dívidas)', desc: 'Relatório de membros com pagamentos de quotas em atraso.', icon: CreditCard, color: 'text-red-500', bg: 'bg-red-100' },
-    { id: 'quotas_pagas', title: 'Mapa de Quotas (Pagas)', desc: 'Extrato de quotas pagas no ano corrente para contabilidade.', icon: CreditCard, color: 'text-green-500', bg: 'bg-green-100' },
+    { id: 'quotas_divida', title: 'Quota e Fundo Social (Dívidas)', desc: 'Relatório de membros com quota e fundo social em atraso, números de cartão, meses não pagas e montantes em dívida.', icon: CreditCard, color: 'text-red-500', bg: 'bg-red-100' },
+    { id: 'quotas_pagas', title: 'Quota e Fundo Social (Pagas)', desc: 'Extrato de quota e fundo social pagos no ano corrente para contabilidade.', icon: CreditCard, color: 'text-green-500', bg: 'bg-green-100' },
     { id: 'movimentos', title: 'Extrato Financeiro', desc: 'Fluxo completo de entradas e saídas de caixa do sindicato.', icon: DollarSign, color: 'text-yellow-500', bg: 'bg-yellow-100' },
     { id: 'auditoria', title: 'Logs de Auditoria', desc: 'Registo de ações de sistema dos utilizadores administrativos.', icon: FileText, color: 'text-gray-500', bg: 'bg-gray-100' }
   ];

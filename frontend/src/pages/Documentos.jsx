@@ -161,64 +161,79 @@ const Documentos = () => {
         </div>
       </div>
 
-      {/* Modal de Upload */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-          <div className="card w-full max-w-md bg-white">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Upload de Documento</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>&times;</span>
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-md">
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Upload size={18} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Upload de Documento</h3>
+                  <p className="text-xs text-slate-500">Suporta PDF, JPG, PNG, DOC</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <span className="text-xl leading-none">&times;</span>
               </button>
             </div>
 
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div className="form-group">
-                <label className="form-label">Título do Documento</label>
-                <input
-                  type="text"
-                  required
-                  className="form-control"
-                  placeholder="Ex: Ata da Reunião Março 2026"
-                  value={formData.titulo}
-                  onChange={e => setFormData({ ...formData, titulo: e.target.value })}
-                />
-              </div>
+            <div className="modal-body">
+              <form id="form-documento" onSubmit={handleUpload} className="space-y-4">
+                <div className="form-group">
+                  <label className="form-label">Título do Documento</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-control"
+                    placeholder="Ex: Ata da Reunião Março 2026"
+                    value={formData.titulo}
+                    onChange={e => setFormData({ ...formData, titulo: e.target.value })}
+                  />
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Categoria</label>
-                <select
-                  className="form-control"
-                  value={formData.tipo}
-                  onChange={e => setFormData({ ...formData, tipo: e.target.value })}
-                >
-                  <option value="geral">Geral</option>
-                  <option value="ata">Ata de Reunião</option>
-                  <option value="estatuto">Estatuto</option>
-                  <option value="contrato">Contrato</option>
-                  <option value="circular">Circular</option>
-                  <option value="relatorio">Relatório Financeiro</option>
-                </select>
-              </div>
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <div className="form-control-select-wrapper">
+                    <select
+                      className="form-control"
+                      value={formData.tipo}
+                      onChange={e => setFormData({ ...formData, tipo: e.target.value })}
+                    >
+                      <option value="geral">Geral</option>
+                      <option value="ata">Ata de Reunião</option>
+                      <option value="estatuto">Estatuto</option>
+                      <option value="contrato">Contrato</option>
+                      <option value="circular">Circular</option>
+                      <option value="relatorio">Relatório Financeiro</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Ficheiro (PDF, JPG, PNG)</label>
-                <input
-                  type="file"
-                  required
-                  className="form-control"
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  onChange={e => setFormData({ ...formData, ficheiro: e.target.files[0] })}
-                />
-              </div>
+                <div className="form-group">
+                  <label className="form-label">Ficheiro (PDF, JPG, PNG)</label>
+                  <input
+                    type="file"
+                    required
+                    className="form-control"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={e => setFormData({ ...formData, ficheiro: e.target.files[0] })}
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Tamanho máximo: 10 MB</p>
+                </div>
+              </form>
+            </div>
 
-              <div className="flex gap-2 mt-8 pt-4 border-t">
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline flex-1">Cancelar</button>
-                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">
-                  {isSubmitting ? 'A enviar...' : 'Confirmar Upload'}
-                </button>
-              </div>
-            </form>
+            <div className="modal-footer">
+              <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline">Cancelar</button>
+              <button type="submit" form="form-documento" disabled={isSubmitting} className="btn btn-primary">
+                {isSubmitting ? 'A enviar...' : 'Confirmar Upload'}
+              </button>
+            </div>
           </div>
         </div>
       )}

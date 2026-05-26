@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -7,9 +7,17 @@ import { Lock, Mail, ShieldCheck } from 'lucide-react';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedRemember = localStorage.getItem('rememberMe') === 'true';
+    if (savedEmail) setEmail(savedEmail);
+    if (savedRemember) setRememberMe(true);
+  }, []);
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -24,7 +32,7 @@ const Login = () => {
 
     setIsSubmitting(true);
     try {
-      const success = await login(email, password);
+      const success = await login(email, password, rememberMe);
       if (success) {
         toast.success('Login efetuado com sucesso!');
         navigate('/dashboard');
@@ -96,7 +104,12 @@ const Login = () => {
             {/* Remember & Forgot */}
             <div className="flex items-center justify-between pt-2">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer" />
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer"
+                />
                 <span className="text-sm text-slate-600">Lembrar sessão</span>
               </label>
               <a href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium">

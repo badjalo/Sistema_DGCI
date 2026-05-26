@@ -269,86 +269,98 @@ const Configuracoes = () => {
             </div>
 
             {showUserModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                <div className="card w-full max-w-md bg-white">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-900">Adicionar Utilizador</h3>
+              <div className="modal-backdrop">
+                <div className="modal-card max-w-md">
+                  <div className="modal-header">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <span className="text-blue-600 font-bold text-sm">U+</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">Adicionar Utilizador</h3>
+                        <p className="text-xs text-slate-500">Crie um novo acesso ao sistema</p>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setShowUserModal(false)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                     >
-                      <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>&times;</span>
+                      <span className="text-xl leading-none">&times;</span>
                     </button>
                   </div>
 
-                  <form onSubmit={handleCreateUser} className="space-y-4">
-                    <div className="form-group">
-                      <label className="form-label">Nome Completo</label>
-                      <input
-                        type="text"
-                        name="nome"
-                        value={newUser.nome}
-                        onChange={handleNewUserChange}
-                        className="form-control"
-                        required
-                      />
-                    </div>
+                  <div className="modal-body">
+                    <form id="form-utilizador" onSubmit={handleCreateUser} className="space-y-4">
+                      <div className="form-group">
+                        <label className="form-label">Nome Completo</label>
+                        <input
+                          type="text"
+                          name="nome"
+                          value={newUser.nome}
+                          onChange={handleNewUserChange}
+                          className="form-control"
+                          required
+                        />
+                      </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Email</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={newUser.email}
-                        onChange={handleNewUserChange}
-                        className="form-control"
-                        required
-                      />
-                    </div>
+                      <div className="form-group">
+                        <label className="form-label">Email</label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={newUser.email}
+                          onChange={handleNewUserChange}
+                          className="form-control"
+                          required
+                        />
+                      </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Password</label>
-                      <input
-                        type="password"
-                        name="password"
-                        value={newUser.password}
-                        onChange={handleNewUserChange}
-                        className="form-control"
-                        required
-                      />
-                    </div>
+                      <div className="form-group">
+                        <label className="form-label">Password</label>
+                        <input
+                          type="password"
+                          name="password"
+                          value={newUser.password}
+                          onChange={handleNewUserChange}
+                          className="form-control"
+                          required
+                        />
+                      </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Perfil</label>
-                      <select
-                        name="perfil"
-                        value={newUser.perfil}
-                        onChange={handleNewUserChange}
-                        className="form-control"
-                      >
-                        <option value="administrador">Administrador</option>
-                        <option value="presidente">Presidente</option>
-                        <option value="tesoureiro">Tesoureiro</option>
-                        <option value="secretario">Secretário</option>
-                        <option value="operador">Operador</option>
-                        <option value="auditor">Auditor</option>
-                      </select>
-                    </div>
+                      <div className="form-group">
+                        <label className="form-label">Perfil</label>
+                        <div className="form-control-select-wrapper">
+                          <select
+                            name="perfil"
+                            value={newUser.perfil}
+                            onChange={handleNewUserChange}
+                            className="form-control"
+                          >
+                            <option value="administrador">Administrador</option>
+                            <option value="presidente">Presidente</option>
+                            <option value="tesoureiro">Tesoureiro</option>
+                            <option value="secretario">Secretário</option>
+                            <option value="operador">Operador</option>
+                            <option value="auditor">Auditor</option>
+                          </select>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
 
-                    <div className="flex gap-2 mt-4 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setShowUserModal(false)}
-                        className="btn btn-outline flex-1"
-                      >
-                        Cancelar
-                      </button>
-                      <button type="submit" disabled={creatingUser} className="btn btn-primary flex-1">
-                        {creatingUser ? 'A criar...' : 'Criar Utilizador'}
-                      </button>
-                    </div>
-                  </form>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      onClick={() => setShowUserModal(false)}
+                      className="btn btn-outline"
+                    >
+                      Cancelar
+                    </button>
+                    <button type="submit" form="form-utilizador" disabled={creatingUser} className="btn btn-primary">
+                      {creatingUser ? 'A criar...' : 'Criar Utilizador'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

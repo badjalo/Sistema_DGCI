@@ -149,101 +149,109 @@ const Departamentos = () => {
         ))}
       </div>
 
-      {/* Modal Novo/Editar Departamento */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-          <div className="card w-full max-w-md bg-white">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">{editId ? 'Editar Departamento' : 'Novo Departamento'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>&times;</span>
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-md">
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Building size={18} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">{editId ? 'Editar Departamento' : 'Novo Departamento'}</h3>
+                  <p className="text-xs text-slate-500">{editId ? 'Atualize os dados do departamento' : 'Preencha os dados para criar'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <span className="text-xl leading-none">&times;</span>
               </button>
             </div>
-            
-            <form onSubmit={handleNovoDepartamento} className="space-y-4">
-              <div className="form-group">
-                <label className="form-label">Nome do Departamento</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="form-control" 
-                  placeholder="Ex: Recursos Humanos" 
-                  value={formData.nome} 
-                  onChange={e => setFormData({...formData, nome: e.target.value})} 
-                />
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+            <div className="modal-body">
+              <form id="form-departamento" onSubmit={handleNovoDepartamento} className="space-y-4">
                 <div className="form-group">
-                  <label className="form-label">Sigla</label>
-                  <input 
-                    type="text" 
-                    required 
-                    className="form-control uppercase" 
-                    placeholder="Ex: RH" 
-                    maxLength={10}
-                    value={formData.sigla} 
-                    onChange={e => setFormData({...formData, sigla: e.target.value.toUpperCase()})} 
+                  <label className="form-label">Nome do Departamento</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-control"
+                    placeholder="Ex: Recursos Humanos"
+                    value={formData.nome}
+                    onChange={e => setFormData({...formData, nome: e.target.value})}
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Responsável</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    placeholder="Opcional" 
-                    value={formData.responsavel_nome} 
-                    onChange={e => setFormData({...formData, responsavel_nome: e.target.value})} 
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label">Sigla</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-control uppercase"
+                      placeholder="Ex: RH"
+                      maxLength={10}
+                      value={formData.sigla}
+                      onChange={e => setFormData({...formData, sigla: e.target.value.toUpperCase()})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Responsável</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Opcional"
+                      value={formData.responsavel_nome}
+                      onChange={e => setFormData({...formData, responsavel_nome: e.target.value})}
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+
                 <div className="form-group">
                   <label className="form-label">Limite de Quadros (Pessoal)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     min={0}
-                    className="form-control" 
-                    placeholder="Ex: 10 (0 = ilimitado)" 
-                    value={formData.limite_quadros} 
-                    onChange={e => setFormData({...formData, limite_quadros: e.target.value})} 
+                    className="form-control"
+                    placeholder="Ex: 10 (0 = ilimitado)"
+                    value={formData.limite_quadros}
+                    onChange={e => setFormData({...formData, limite_quadros: e.target.value})}
                   />
                 </div>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Descrição</label>
-                <textarea 
-                  className="form-control" 
-                  rows={3} 
-                  placeholder="Descrição breve do departamento..."
-                  value={formData.descricao} 
-                  onChange={e => setFormData({...formData, descricao: e.target.value})} 
-                ></textarea>
-              </div>
 
-              {editId && (
                 <div className="form-group">
-                  <label className="flex items-center gap-2 cursor-pointer mt-2">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.estado} 
-                      onChange={e => setFormData({...formData, estado: e.target.checked})} 
+                  <label className="form-label">Descrição</label>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    placeholder="Descrição breve do departamento..."
+                    value={formData.descricao}
+                    onChange={e => setFormData({...formData, descricao: e.target.value})}
+                  ></textarea>
+                </div>
+
+                {editId && (
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.estado}
+                      onChange={e => setFormData({...formData, estado: e.target.checked})}
                       className="w-4 h-4 text-blue-600 rounded border-gray-300"
                     />
-                    <span className="text-sm font-medium text-gray-700">Departamento Ativo</span>
+                    <span className="text-sm font-medium text-slate-700">Departamento Ativo</span>
                   </label>
-                </div>
-              )}
+                )}
+              </form>
+            </div>
 
-              <div className="flex gap-2 mt-8 pt-4 border-t">
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline flex-1">Cancelar</button>
-                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">
-                  {isSubmitting ? 'A guardar...' : (editId ? 'Atualizar' : 'Criar Departamento')}
-                </button>
-              </div>
-            </form>
+            <div className="modal-footer">
+              <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline">Cancelar</button>
+              <button type="submit" form="form-departamento" disabled={isSubmitting} className="btn btn-primary">
+                {isSubmitting ? 'A guardar...' : (editId ? 'Atualizar' : 'Criar Departamento')}
+              </button>
+            </div>
           </div>
         </div>
       )}

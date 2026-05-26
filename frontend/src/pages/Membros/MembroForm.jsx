@@ -24,7 +24,8 @@ const MembroForm = () => {
     nib: '',
     departamento_id: '',
     data_admissao: new Date().toISOString().split('T')[0],
-    estado: 'ativo'
+    estado: 'ativo',
+    fundo_social: false
   });
   const [preview, setPreview] = useState(null);
 
@@ -62,6 +63,8 @@ const MembroForm = () => {
       if (name === 'telefone') {
         const formatted = formatPhone(value);
         setFormData(prev => ({ ...prev, [name]: formatted }));
+      } else if (name === 'fundo_social') {
+        setFormData(prev => ({ ...prev, [name]: value === 'true' }));
       } else {
         setFormData(prev => ({ ...prev, [name]: value }));
       }
@@ -98,8 +101,6 @@ const MembroForm = () => {
       }
       const data = new FormData();
       // incluir numero_membro gerado automaticamente
-      if (numeroMembro) data.append('numero_membro', numeroMembro);
-      else if (formData.numero_membro) data.append('numero_membro', formData.numero_membro);
       data.append('nome_completo', formData.nome_completo);
       data.append('sexo', formData.sexo);
       data.append('data_nascimento', formData.data_nascimento || '');
@@ -115,6 +116,7 @@ const MembroForm = () => {
       data.append('data_admissao', formData.data_admissao || '');
       data.append('estado', formData.estado || 'ativo');
       data.append('observacoes', formData.observacoes || '');
+      data.append('fundo_social', formData.fundo_social);
       if (formData.foto) data.append('foto', formData.foto);
 
       await api.post('/membros', data, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -233,7 +235,7 @@ const MembroForm = () => {
         {/* Dados Profissionais */}
         <div className="card">
           <h2 className="text-lg font-bold text-slate-900 mb-4 pb-4 border-b border-slate-200">Dados Profissionais</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="form-label">Cargo / Função</label>
               <input type="text" name="funcao_cargo" value={formData.funcao_cargo || ''} onChange={handleChange} className="form-control" />
@@ -279,6 +281,17 @@ const MembroForm = () => {
             <div>
               <label className="form-label">Data de Admissão</label>
               <input type="date" name="data_admissao" required value={formData.data_admissao} onChange={handleChange} className="form-control" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="form-label">Inscrito no Fundo Social?</label>
+              <div className="form-control-select-wrapper">
+                <select name="fundo_social" value={formData.fundo_social ? 'true' : 'false'} onChange={handleChange} className="form-control">
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
             </div>
           </div>
           <div className="mt-4">

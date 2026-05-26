@@ -74,6 +74,7 @@ CREATE TABLE membros (
     qr_code TEXT,
     historico_profissional JSONB DEFAULT '[]'::jsonb,
     observacoes TEXT,
+    fundo_social BOOLEAN DEFAULT false,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

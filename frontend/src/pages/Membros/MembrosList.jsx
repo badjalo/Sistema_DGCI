@@ -90,7 +90,10 @@ const MembrosList = () => {
               <select
                 className="form-control pl-12 appearance-none"
                 value={estadoFilter}
-                onChange={(e) => setEstadoFilter(e.target.value)}
+                onChange={(e) => {
+                  setEstadoFilter(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
               >
                 <option value="">Todos os Estados</option>
                 <option value="ativo">Ativos</option>
@@ -141,7 +144,12 @@ const MembrosList = () => {
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900">{membro.nome_completo}</p>
-                          <p className="text-xs text-gray-500">{membro.numero_membro}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-gray-500">{membro.numero_membro}</span>
+                            {membro.fundo_social && (
+                              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider scale-95 origin-left">Fundo Social</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

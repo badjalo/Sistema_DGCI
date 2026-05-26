@@ -15,7 +15,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const menuItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/membros', icon: Users, label: 'Membros' },
-    { path: '/quotas', icon: CreditCard, label: 'Quotas' },
+    { path: '/quotas', icon: CreditCard, label: 'Quota e Fundo Social' },
     { path: '/financeiro', icon: DollarSign, label: 'Financeiro' },
     { path: '/documentos', icon: FileText, label: 'Documentos' },
     { path: '/comunicados', icon: MessageSquare, label: 'Comunicados' },

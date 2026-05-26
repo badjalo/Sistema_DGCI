@@ -25,6 +25,7 @@ const MembroEditar = () => {
         departamento_id: '',
         data_admissao: new Date().toISOString().split('T')[0],
         estado: 'ativo',
+        fundo_social: false,
         observacoes: ''
     });
 
@@ -51,6 +52,7 @@ const MembroEditar = () => {
                     departamento_id: membro.departamento_id || '',
                     data_admissao: membro.data_admissao?.split('T')[0] || '',
                     estado: membro.estado || 'ativo',
+                    fundo_social: membro.fundo_social || false,
                     observacoes: membro.observacoes || ''
                 });
 
@@ -69,6 +71,8 @@ const MembroEditar = () => {
         const { name, value } = e.target;
         if (name === 'telefone') {
             setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
+        } else if (name === 'fundo_social') {
+            setFormData(prev => ({ ...prev, [name]: value === 'true' }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
@@ -204,7 +208,7 @@ const MembroEditar = () => {
                     {/* Dados Profissionais e Sindicais */}
                     <div>
                         <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">Vínculo Sindical e Profissional</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                             <div className="form-group">
                                 <label className="form-label">Cargo / Função</label>
                                 <input type="text" name="funcao_cargo" value={formData.funcao_cargo} onChange={handleChange} className="form-control" />
@@ -251,6 +255,17 @@ const MembroEditar = () => {
                                         <option value="suspenso">Suspenso</option>
                                         <option value="reformado">Reformado</option>
                                         <option value="inativo">Inativo</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="form-group">
+                                <label className="form-label">Inscrito no Fundo Social?</label>
+                                <div className="form-control-select-wrapper">
+                                    <select name="fundo_social" value={formData.fundo_social ? 'true' : 'false'} onChange={handleChange} className="form-control">
+                                        <option value="false">Não</option>
+                                        <option value="true">Sim</option>
                                     </select>
                                 </div>
                             </div>

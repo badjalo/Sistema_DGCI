@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { 
   Users, CreditCard, TrendingUp, UserPlus, 
-  ArrowUpRight, ArrowDownRight, DollarSign, Activity, PieChart as PieChartIcon
+  ArrowUpRight, ArrowDownRight, DollarSign, Activity, PieChart as PieChartIcon, Heart
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
@@ -65,7 +65,7 @@ const Dashboard = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         
         {/* Total de Membros */}
         <div className="card overflow-hidden">
@@ -90,24 +90,45 @@ const Dashboard = () => {
             <div className="flex-1">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Quotas Cobradas</p>
               <h3 className="text-2xl font-bold text-slate-900 mt-2">
-                {formatXOF(quotas.total_cobrado_ano).replace('XOF', '').trim()}
+                {formatXOF(quotas.total_quotas_cobradas || 0).replace('XOF', '').trim()}
                 <span className="text-sm text-slate-400 font-medium ml-1">XOF</span>
               </h3>
-              <p className="text-xs text-slate-600 font-medium mt-3">{quotas.pagas} liquidadas</p>
+              <p className="text-xs text-red-500 font-medium mt-3">
+                Dívida: {formatXOF(quotas.total_quota_divida_ano || 0)}
+              </p>
             </div>
-            <div className="bg-green-100 p-3 rounded-lg text-green-600">
+            <div className="bg-emerald-100 p-3 rounded-lg text-emerald-600">
               <CreditCard size={24} />
             </div>
           </div>
         </div>
 
-        {/* Quotas em Dívida */}
+        {/* Fundo Social Cobrado */}
         <div className="card overflow-hidden">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Dívida em Quotas</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fundo Social</p>
               <h3 className="text-2xl font-bold text-slate-900 mt-2">
-                {formatXOF(quotas.total_divida_ano).replace('XOF', '').trim()}
+                {formatXOF(quotas.total_fundo_social_cobrado || 0).replace('XOF', '').trim()}
+                <span className="text-sm text-slate-400 font-medium ml-1">XOF</span>
+              </h3>
+              <p className="text-xs text-red-500 font-medium mt-3">
+                Dívida: {formatXOF(quotas.total_fundo_social_divida_ano || 0)}
+              </p>
+            </div>
+            <div className="bg-purple-100 p-3 rounded-lg text-purple-600">
+              <Heart size={24} className="fill-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Dívida Total */}
+        <div className="card overflow-hidden">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Dívida Total</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-2">
+                {formatXOF(quotas.total_divida_ano || 0).replace('XOF', '').trim()}
                 <span className="text-sm text-slate-400 font-medium ml-1">XOF</span>
               </h3>
               <p className="text-xs text-red-600 font-semibold mt-3 flex items-center gap-1">

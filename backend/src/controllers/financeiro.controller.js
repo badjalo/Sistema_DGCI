@@ -136,13 +136,14 @@ const resumo = async (req, res, next) => {
           SELECT SUM(
             GREATEST(0, (DATE_PART('year', age(CURRENT_DATE, m.data_admissao)) * 12 + DATE_PART('month', age(CURRENT_DATE, m.data_admissao)) + 1) - 
             (SELECT COUNT(*) FROM pagamentos p WHERE p.membro_id = m.id AND p.estado = 'pago'))
-          ) * COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000)
+            * (COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000) + CASE WHEN m.fundo_social = true THEN 4000 ELSE 0 END)
+          )
           FROM membros m WHERE m.estado IN ('ativo', 'suspenso')
         ), 0) as total_divida,
 
         -- Monthly debt for specific month and year ($1 = ano, $2 = mes)
         COALESCE((
-          SELECT COUNT(*) * COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000)
+          SELECT SUM(COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000) + CASE WHEN m.fundo_social = true THEN 4000 ELSE 0 END)
           FROM membros m
           WHERE m.estado IN ('ativo', 'suspenso')
             -- The month is on or after the member's admission date

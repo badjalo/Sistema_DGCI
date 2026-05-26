@@ -1,8 +1,5 @@
 const { query } = require('../config/database');
-const PDFDocument = require('pdfkit');
-const path = require('path');
-const fs = require('fs');
-const QRCode = require('qrcode');
+
 
 const gerarNumeroMembro = async () => {
   // use DB sequence to avoid race conditions
@@ -116,7 +113,7 @@ const criar = async (req, res, next) => {
     const {
       nome_completo, sexo, data_nascimento, estado_civil: raw_estado_civil, nif,
       bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id,
-      departamento_id, data_admissao, estado, observacoes
+      departamento_id, data_admissao, estado, observacoes, fundo_social
     } = req.body;
 
     const estado_civil = normalizeEstadoCivil(raw_estado_civil);
@@ -153,22 +150,50 @@ const criar = async (req, res, next) => {
     // gerar número do membro se não foi fornecido
     const numero_membro = req.body.numero_membro && req.body.numero_membro.trim() ? req.body.numero_membro.trim() : await gerarNumeroMembro();
 
+    const duplicateCheck = await query(
+      `SELECT nif, bi_passaporte, email
+       FROM membros
+       WHERE (nif IS NOT NULL AND nif <> '' AND nif = $1)
+          OR bi_passaporte = $2
+          OR (email IS NOT NULL AND email <> '' AND email = $3)
+       LIMIT 1`,
+      [nif || '', bi_passaporte, email || '']
+    );
+
+    if (duplicateCheck.rows.length) {
+      const duplicate = duplicateCheck.rows[0];
+      if (duplicate.bi_passaporte === bi_passaporte) {
+        return res.status(409).json({ error: 'BI/Passaporte já registado no sistema' });
+      }
+      if (duplicate.nif && nif && duplicate.nif === nif) {
+        return res.status(409).json({ error: 'NIF já registado no sistema' });
+      }
+      if (duplicate.email && email && duplicate.email === email) {
+        return res.status(409).json({ error: 'Email já registado no sistema' });
+      }
+    }
+
     const result = await query(
       `INSERT INTO membros 
        (numero_membro, nome_completo, foto_url, sexo, data_nascimento, estado_civil, nif,
         bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id, departamento_id,
-        data_admissao, estado, observacoes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        data_admissao, estado, observacoes, fundo_social)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
        RETURNING *`,
       [numero_membro, nome_completo, foto_url, sexo, data_nascimento, estado_civil || 'solteiro', nif,
         bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id || null,
-        departamento_id || null, data_admissao || new Date(), estado || 'ativo', observacoes]
+        departamento_id || null, data_admissao || new Date(), estado || 'ativo', observacoes, fundo_social === 'true' || fundo_social === true]
     );
 
     res.status(201).json({ success: true, data: result.rows[0], message: 'Membro criado com sucesso' });
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'BI/Passaporte, NIF ou Email já registado no sistema' });
+      const detail = err.detail || '';
+      let field = 'BI/Passaporte, NIF ou Email';
+      if (detail.includes('nif')) field = 'NIF';
+      else if (detail.includes('bi_passaporte')) field = 'BI/Passaporte';
+      else if (detail.includes('email')) field = 'Email';
+      return res.status(409).json({ error: `${field} já registado no sistema` });
     }
     next(err);
   }
@@ -180,7 +205,7 @@ const atualizar = async (req, res, next) => {
     const {
       nome_completo, sexo, data_nascimento, estado_civil: raw_estado_civil, nif,
       bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id,
-      departamento_id, data_admissao, estado, observacoes, historico_profissional
+      departamento_id, data_admissao, estado, observacoes, historico_profissional, fundo_social
     } = req.body;
 
     const estado_civil = normalizeEstadoCivil(raw_estado_civil);
@@ -228,6 +253,9 @@ const atualizar = async (req, res, next) => {
       observacoes, historico_profissional
     };
     if (foto_url) fields.foto_url = foto_url;
+    if (fundo_social !== undefined) {
+      fields.fundo_social = fundo_social === 'true' || fundo_social === true;
+    }
 
     Object.entries(fields).forEach(([key, val]) => {
       if (val !== undefined) {
@@ -249,7 +277,12 @@ const atualizar = async (req, res, next) => {
     res.json({ success: true, data: result.rows[0], message: 'Membro atualizado com sucesso' });
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'BI/Passaporte, NIF ou Email já existe noutro membro' });
+      const detail = err.detail || '';
+      let field = 'BI/Passaporte, NIF ou Email';
+      if (detail.includes('nif')) field = 'NIF';
+      else if (detail.includes('bi_passaporte')) field = 'BI/Passaporte';
+      else if (detail.includes('email')) field = 'Email';
+      return res.status(409).json({ error: `${field} já existe noutro membro` });
     }
     next(err);
   }
@@ -310,7 +343,11 @@ const estatisticas = async (req, res, next) => {
 const obterCartao = async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT m.*, d.nome as departamento_nome FROM membros m LEFT JOIN departamentos d ON d.id = m.departamento_id WHERE m.id = $1`,
+      `SELECT m.*, d.nome as departamento_nome, c.nome as cargo_nome
+       FROM membros m
+       LEFT JOIN departamentos d ON d.id = m.departamento_id
+       LEFT JOIN cargos c ON c.id = m.cargo_id
+       WHERE m.id = $1`,
       [req.params.id]
     );
 
@@ -320,129 +357,11 @@ const obterCartao = async (req, res, next) => {
 
     const membro = result.rows[0];
 
-    // Definir headers antes de criar o documento
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="cartao_${membro.numero_membro}.pdf"`);
 
-    // Criar PDF do cartão com frente e verso seguindo o layout de exemplo
-    const doc = new PDFDocument({ size: 'A6', layout: 'landscape', margin: 10 });
-    doc.pipe(res);
-
-    const assetsDir = path.join(__dirname, '../../uploads/assets');
-    const logoPath = path.join(assetsDir, 'logo.png');
-    const bgPath = path.join(assetsDir, 'card_example.png'); // template de cartão (frente/verso)
-
-    // Generate QR Code data
-    const qrData = `SF-DGCI | Membro: ${membro.numero_membro}\nNome: ${membro.nome_completo}\nEntidade: ${membro.departamento_nome || 'N/A'}`;
-    const qrImage = await QRCode.toDataURL(qrData, { margin: 1, width: 100, color: { dark: '#1a2f5e', light: '#ffffff' } });
-
-    // --- Frente ---
-    // background template (if available)
-    if (fs.existsSync(bgPath)) {
-      try { doc.image(bgPath, 0, 0, { width: doc.page.width, height: doc.page.height }); } catch (e) { }
-    } else {
-      // background and watermark
-      doc.rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
-      if (fs.existsSync(logoPath)) {
-        doc.save();
-        doc.opacity(0.06);
-        doc.image(logoPath, (doc.page.width - 150) / 2, (doc.page.height - 150) / 2, { width: 150 });
-        doc.restore();
-      }
-      
-      // header bar Navy
-      doc.rect(0, 0, doc.page.width, 24).fill('#1a2f5e');
-      doc.fillColor('#c9a227').fontSize(9).font('Helvetica-Bold').text('SINDICATO DA DIREÇÃO-GERAL DAS CONTRIBUIÇÕES E IMPOSTOS', 0, 8, { align: 'center', width: doc.page.width });
-    }
-
-    // Foto/avatar box (left)
-    const avatarX = 20;
-    const avatarY = 35;
-    const avatarSize = 88;
-    doc.roundedRect(avatarX, avatarY, avatarSize, avatarSize, 8).fillOpacity(1).fill('#f4f7fb');
-    doc.fillColor('#1a2f5e').fontSize(34).font('Helvetica-Bold').text((membro.nome_completo || 'M').charAt(0), avatarX + avatarSize / 2 - 12, avatarY + avatarSize / 2 - 14);
-
-    // Left small member number
-    doc.fillColor('#c9a227').fontSize(8).font('Helvetica-Bold').text('Nº DE MEMBRO', avatarX, avatarY + avatarSize + 8);
-    doc.fillColor('#1a2f5e').fontSize(10).text(membro.numero_membro || '-', avatarX, avatarY + avatarSize + 20);
-
-    // Center panel
-    const infoX = 125;
-    
-    // yellow badge (Accent Gold)
-    doc.roundedRect(infoX, 35, 100, 18, 4).fill('#c9a227');
-    doc.fillColor('#ffffff').fontSize(8).text('CARTÃO DE MEMBRO', infoX + 6, 39);
-
-    // member details
-    doc.fillColor('#1a2f5e').fontSize(9).font('Helvetica-Bold').text('NOME:', infoX, 65);
-    doc.font('Helvetica').fontSize(9).text(membro.nome_completo || '-', infoX + 50, 65, { width: 150, height: 12 });
-    
-    doc.font('Helvetica-Bold').fontSize(9).text('PROFISSÃO:', infoX, 85);
-    doc.font('Helvetica').fontSize(9).text(membro.funcao_cargo || '-', infoX + 70, 85, { width: 130, height: 12 });
-    
-    doc.font('Helvetica-Bold').fontSize(9).text('ENTIDADE:', infoX, 105);
-    doc.font('Helvetica').fontSize(9).text(membro.departamento_nome || '-', infoX + 65, 105, { width: 140, height: 12 });
-
-    // QR Image (right)
-    doc.image(qrImage, doc.page.width - 85, 35, { width: 65, height: 65 });
-
-    // If member has a photo, try to draw it inside avatar box
-    if (membro.foto_url) {
-      try {
-        const photoPath = path.join(__dirname, '../../', membro.foto_url.replace(/^\//, ''));
-        if (fs.existsSync(photoPath)) {
-          // fit photo inside avatar box with padding
-          doc.image(photoPath, avatarX + 6, avatarY + 6, { width: avatarSize - 12, height: avatarSize - 12, fit: [avatarSize - 12, avatarSize - 12] });
-        }
-      } catch (e) { }
-    }
-
-    // Admission and validity
-    const adm = membro.data_admissao ? new Date(membro.data_admissao) : null;
-    const validade = adm ? new Date(adm.getFullYear() + 1, adm.getMonth(), adm.getDate()) : null;
-    if (adm) {
-      const fmt = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-      doc.fillColor('#1a2f5e').fontSize(8).font('Helvetica-Bold').text('ADMISSÃO:', infoX, 130);
-      doc.font('Helvetica').fontSize(8).text(adm ? fmt(adm) : '-', infoX + 65, 130);
-      doc.font('Helvetica-Bold').fontSize(8).text('VALIDADE:', infoX + 130, 130);
-      doc.font('Helvetica').fontSize(8).text(validade ? fmt(validade) : '-', infoX + 185, 130);
-    }
-
-    // --- Verso ---
-    doc.addPage({ size: 'A6', layout: 'landscape', margin: 10 });
-
-    // background for verso
-    if (fs.existsSync(bgPath)) {
-      try { doc.image(bgPath, 0, 0, { width: doc.page.width, height: doc.page.height }); } catch (e) { }
-    } else {
-      doc.rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
-      if (fs.existsSync(logoPath)) {
-        doc.save();
-        doc.opacity(0.06);
-        doc.image(logoPath, (doc.page.width - 150) / 2, (doc.page.height - 150) / 2, { width: 150 });
-        doc.restore();
-      }
-    }
-
-    // Verso content
-    try {
-      if (fs.existsSync(logoPath)) {
-        const logoW = 50;
-        doc.image(logoPath, (doc.page.width - logoW) / 2, 15, { width: logoW });
-      }
-    } catch (e) { }
-
-    doc.fillColor('#1a2f5e').fontSize(10).font('Helvetica-Bold').text('O TITULAR DESTE CARTÃO', 20, 20);
-    doc.fillColor('#4b5563').fontSize(8).font('Helvetica').text('É membro efetivo do Sindicato dos Funcionários da Direção-Geral das Contribuições e Impostos, estando em pleno gozo dos seus direitos e deveres estatutários.', 20, 36, { width: doc.page.width / 2 - 20 });
-
-    doc.fillColor('#1a2f5e').fontSize(9).font('Helvetica-Bold').text('MISSÃO DO SINDICATO', doc.page.width / 2 + 10, 20);
-    doc.fillColor('#4b5563').fontSize(8).text('Defender os direitos, promover o bem-estar e valorizar todos os funcionários da DGCI.', doc.page.width / 2 + 10, 36, { width: doc.page.width / 2 - 30 });
-
-    // footer contact bar
-    doc.rect(0, doc.page.height - 34, doc.page.width, 34).fill('#1a2f5e');
-    doc.fillColor('white').fontSize(7).text('Sindicato DGCI  •  sindicatodgci@gmail.com  •  +245 95 123 45 67', 12, doc.page.height - 22, { align: 'center', width: doc.page.width - 24 });
-
-    doc.end();
+    const { generateCard } = require('../utils/cardGenerator');
+    await generateCard(membro, res);
   } catch (err) {
     next(err);
   }

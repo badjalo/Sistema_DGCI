@@ -206,10 +206,10 @@ const Financeiro = () => {
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Dívida</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Dívida acumulada</p>
                 <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumo.divida).replace('XOF', '').trim()}</h3>
                 <p className="text-xs text-red-600 font-medium mt-2 flex items-center gap-1">
-                  <AlertCircle size={14} /> Débitos pendentes
+                  <AlertCircle size={14} /> Dívida total de quotas pendentes
                 </p>
               </div>
               <div className="bg-red-100 p-3 rounded-lg text-red-600"><AlertCircle size={20} /></div>
@@ -257,8 +257,11 @@ const Financeiro = () => {
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Dívida (Mês)</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Dívida do mês</p>
                 <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumoMes.divida).replace('XOF', '').trim()}</h3>
+                <p className="text-xs text-red-600 font-medium mt-2 flex items-center gap-1">
+                  <AlertCircle size={14} /> Dívida apenas para o mês selecionado
+                </p>
               </div>
               <div className="bg-amber-100 p-2 rounded-lg text-amber-600"><AlertCircle size={18} /></div>
             </div>
@@ -336,51 +339,90 @@ const Financeiro = () => {
         </div>
       </div>
 
-      {/* Modal Novo Movimento */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-          <div className="card w-full max-w-md bg-white">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Novo Movimento</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>&times;</span>
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-md">
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${formData.tipo === 'receita' ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {formData.tipo === 'receita'
+                    ? <ArrowUpRight size={18} className="text-green-600" />
+                    : <ArrowDownRight size={18} className="text-red-600" />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Novo Movimento</h3>
+                  <p className="text-xs text-slate-500">Registe uma receita ou despesa</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <span className="text-xl leading-none">&times;</span>
               </button>
             </div>
-            <form onSubmit={handleNovoMovimento} className="space-y-4">
-              <div className="form-group">
-                <label className="form-label">Tipo de Movimento</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="tipo" value="receita" checked={formData.tipo === 'receita'} onChange={e => setFormData({ ...formData, tipo: e.target.value })} />
-                    <span className="text-green-600 font-semibold">Receita (+)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="tipo" value="despesa" checked={formData.tipo === 'despesa'} onChange={e => setFormData({ ...formData, tipo: e.target.value })} />
-                    <span className="text-red-600 font-semibold">Despesa (-)</span>
-                  </label>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Descrição</label>
-                <input type="text" required className="form-control" placeholder="Ex: Pagamento Fornecedor X" value={formData.descricao} onChange={e => setFormData({ ...formData, descricao: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+
+            <div className="modal-body">
+              <form id="form-financeiro" onSubmit={handleNovoMovimento} className="space-y-4">
                 <div className="form-group">
-                  <label className="form-label">Valor (XOF)</label>
-                  <input type="number" required className="form-control" value={formData.valor} onChange={e => setFormData({ ...formData, valor: e.target.value })} />
+                  <label className="form-label">Tipo de Movimento</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.tipo === 'receita' ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <input type="radio" name="tipo" value="receita" checked={formData.tipo === 'receita'} onChange={e => setFormData({ ...formData, tipo: e.target.value })} className="sr-only" />
+                      <ArrowUpRight size={16} className="text-green-600" />
+                      <span className="text-sm font-semibold text-green-700">Receita (+)</span>
+                    </label>
+                    <label className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.tipo === 'despesa' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <input type="radio" name="tipo" value="despesa" checked={formData.tipo === 'despesa'} onChange={e => setFormData({ ...formData, tipo: e.target.value })} className="sr-only" />
+                      <ArrowDownRight size={16} className="text-red-600" />
+                      <span className="text-sm font-semibold text-red-700">Despesa (-)</span>
+                    </label>
+                  </div>
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Data</label>
-                  <input type="date" required className="form-control" value={formData.data_movimento} onChange={e => setFormData({ ...formData, data_movimento: e.target.value })} />
+                  <label className="form-label">Descrição</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-control"
+                    placeholder="Ex: Pagamento Fornecedor X"
+                    value={formData.descricao}
+                    onChange={e => setFormData({ ...formData, descricao: e.target.value })}
+                  />
                 </div>
-              </div>
-              <div className="flex gap-2 mt-8 pt-4 border-t">
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline flex-1">Cancelar</button>
-                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">
-                  {isSubmitting ? 'A processar...' : 'Guardar'}
-                </button>
-              </div>
-            </form>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label">Valor (XOF)</label>
+                    <input
+                      type="number"
+                      required
+                      className="form-control"
+                      value={formData.valor}
+                      onChange={e => setFormData({ ...formData, valor: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Data</label>
+                    <input
+                      type="date"
+                      required
+                      className="form-control"
+                      value={formData.data_movimento}
+                      onChange={e => setFormData({ ...formData, data_movimento: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline">Cancelar</button>
+              <button type="submit" form="form-financeiro" disabled={isSubmitting} className="btn btn-primary">
+                {isSubmitting ? 'A processar...' : 'Guardar Movimento'}
+              </button>
+            </div>
           </div>
         </div>
       )}

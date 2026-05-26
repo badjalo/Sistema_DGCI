@@ -1,4 +1,8 @@
 const { query } = require('../config/database');
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 /** GET /api/quotas/config */
 const obterConfig = async (req, res, next) => {
@@ -40,7 +44,7 @@ const situacao = async (req, res, next) => {
 
     const result = await query(`
       WITH cfg AS (
-        SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1
+        SELECT COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000) as valor_mensal
       ), params AS (
         SELECT
           $1::integer as ano,
@@ -52,12 +56,16 @@ const situacao = async (req, res, next) => {
       )
       SELECT
         m.id, m.numero_membro, m.nome_completo, m.foto_url, m.estado,
+        m.data_admissao, m.fundo_social,
         d.nome as departamento,
         COALESCE(COUNT(p.id) FILTER (WHERE p.estado = 'pago'), 0) as meses_pagos,
-        COALESCE(COUNT(p.id) FILTER (WHERE p.estado IN ('pendente','atrasado')), 0) as meses_pendentes,
+        COALESCE(COUNT(p.id) FILTER (WHERE p.estado IN ('pendente','atrasado') AND p.mes <= params.max_mes), 0) as meses_pagamentos_pendentes,
+        COALESCE(missing.missing_months, 0) as meses_faltantes,
+        COALESCE(COUNT(p.id) FILTER (WHERE p.estado IN ('pendente','atrasado') AND p.mes <= params.max_mes), 0) +
+          COALESCE(missing.missing_months, 0) as meses_nao_pagas,
         COALESCE(SUM(p.valor) FILTER (WHERE p.estado = 'pago'), 0) as total_pago,
         COALESCE(SUM(p.valor) FILTER (WHERE p.estado IN ('pendente','atrasado') AND p.mes <= params.max_mes), 0) +
-          COALESCE(missing.missing_months * COALESCE(cfg.valor_mensal, 0), 0) as total_divida,
+          COALESCE(missing.missing_months * (cfg.valor_mensal + CASE WHEN m.fundo_social = true THEN 4000 ELSE 0 END), 0) as total_divida,
         json_agg(json_build_object('mes', p.mes, 'estado', p.estado, 'valor', p.valor, 'data_pagamento', p.data_pagamento)
           ORDER BY p.mes) FILTER (WHERE p.id IS NOT NULL) as pagamentos
       FROM membros m
@@ -72,7 +80,7 @@ const situacao = async (req, res, next) => {
         WHERE MAKE_DATE(params.ano, gs.mes, 1) >= DATE_TRUNC('month', m.data_admissao)
       ) missing ON true
       ${where}
-      GROUP BY m.id, m.numero_membro, m.nome_completo, m.foto_url, m.estado, d.nome, cfg.valor_mensal, params.max_mes, missing.missing_months
+      GROUP BY m.id, m.numero_membro, m.nome_completo, m.foto_url, m.estado, m.data_admissao, m.fundo_social, d.nome, cfg.valor_mensal, params.max_mes, missing.missing_months
       ORDER BY m.nome_completo
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
@@ -129,18 +137,109 @@ const registarPagamento = async (req, res, next) => {
       }
 
       // Registar receita automática
-      const configQuota = await query(`SELECT id FROM categorias_financeiras WHERE nome = 'Quotas Mensais' LIMIT 1`);
-      if (configQuota.rows.length) {
-        const membro = await query('SELECT nome_completo FROM membros WHERE id = $1', [membro_id]);
-        await query(
-          `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, registado_por)
-           VALUES ($1, $2, NOW(), $3, $4, $5, $6)`,
-          [`Quota ${mes}/${ano} - ${membro.rows[0]?.nome_completo}`, valor, configQuota.rows[0].id, banco_id, membro_id, req.user.id]
-        );
+      const membro = await query('SELECT nome_completo, fundo_social FROM membros WHERE id = $1', [membro_id]);
+      const nomeMembro = membro.rows[0]?.nome_completo;
+      const isFundoSocial = membro.rows[0]?.fundo_social;
+
+      if (isFundoSocial && valor >= 5000) {
+        // Regista quota de 1000 XOF
+        const configQuota = await query(`SELECT id FROM categorias_financeiras WHERE nome = 'Quotas Mensais' LIMIT 1`);
+        if (configQuota.rows.length) {
+          await query(
+            `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, registado_por)
+             VALUES ($1, $2, NOW(), $3, $4, $5, $6)`,
+            [`Quota ${mes}/${ano} - ${nomeMembro}`, 1000, configQuota.rows[0].id, banco_id, membro_id, req.user.id]
+          );
+        }
+        // Regista fundo social de 4000 XOF
+        const configFundo = await query(`SELECT id FROM categorias_financeiras WHERE nome = 'Fundo Social' LIMIT 1`);
+        if (configFundo.rows.length) {
+          await query(
+            `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, registado_por)
+             VALUES ($1, $2, NOW(), $3, $4, $5, $6)`,
+            [`Fundo Social ${mes}/${ano} - ${nomeMembro}`, 4000, configFundo.rows[0].id, banco_id, membro_id, req.user.id]
+          );
+        }
+      } else {
+        // Regista valor integral como quota
+        const configQuota = await query(`SELECT id FROM categorias_financeiras WHERE nome = 'Quotas Mensais' LIMIT 1`);
+        if (configQuota.rows.length) {
+          await query(
+            `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, registado_por)
+             VALUES ($1, $2, NOW(), $3, $4, $5, $6)`,
+            [`Quota ${mes}/${ano} - ${nomeMembro}`, valor, configQuota.rows[0].id, banco_id, membro_id, req.user.id]
+          );
+        }
       }
     }
 
-    res.json({ success: true, data: result.rows[0], message: 'Pagamento registado com sucesso' });
+    // Generate recibo PDF and update pagamento.recibo_url
+    try {
+      const pay = await query(
+        `SELECT p.*, m.nome_completo, m.numero_membro, u.nome as registado_por_nome
+         FROM pagamentos p
+         LEFT JOIN membros m ON m.id = p.membro_id
+         LEFT JOIN utilizadores u ON u.id = p.registado_por
+         WHERE p.id = $1`,
+        [result.rows[0].id]
+      );
+
+      const payment = pay.rows[0];
+      if (payment) {
+        const uploadsDir = path.join(__dirname, '../../uploads/recibos');
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        const fileName = `recibo_${payment.id}_${uuidv4()}.pdf`;
+        const filePath = path.join(uploadsDir, fileName);
+
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const stream = fs.createWriteStream(filePath);
+        doc.pipe(stream);
+
+        doc.fontSize(18).text('Recibo de Pagamento', { align: 'center' });
+        doc.moveDown();
+
+        doc.fontSize(12).text(`Número do Recibo: ${payment.id}`);
+        doc.text(`Data: ${new Date(payment.data_pagamento).toLocaleString('pt-PT')}`);
+        doc.moveDown();
+
+        doc.text(`Membro: ${payment.nome_completo || 'N/A'}`);
+        doc.text(`Número Membro: ${payment.numero_membro || 'N/A'}`);
+        doc.moveDown();
+
+        doc.text(`Mês/Ano: ${payment.mes}/${payment.ano}`);
+        doc.text(`Valor: ${parseFloat(payment.valor).toFixed(2)} XOF`);
+        doc.text(`Método: ${payment.metodo_pagamento || 'N/A'}`);
+        if (payment.referencia) doc.text(`Referência: ${payment.referencia}`);
+        doc.moveDown();
+
+        doc.text(`Registado por: ${payment.registado_por_nome || 'Sistema'}`);
+        if (payment.observacoes) {
+          doc.moveDown();
+          doc.text(`Observações: ${payment.observacoes}`);
+        }
+
+        doc.moveDown(2);
+        doc.text('Assinatura:');
+        doc.moveDown();
+        doc.text('______________________________');
+
+        doc.end();
+
+        await new Promise((resolve, reject) => {
+          stream.on('finish', resolve);
+          stream.on('error', reject);
+        });
+
+        const receiptUrl = `/uploads/recibos/${fileName}`;
+        await query('UPDATE pagamentos SET recibo_url = $1 WHERE id = $2', [receiptUrl, payment.id]);
+
+        result.rows[0].recibo_url = receiptUrl;
+      }
+    } catch (err) {
+      console.error('Erro ao gerar recibo PDF:', err);
+    }
+
+    res.status(201).json({ success: true, data: result.rows[0], message: 'Pagamento registado com sucesso' });
   } catch (err) { next(err); }
 };
 

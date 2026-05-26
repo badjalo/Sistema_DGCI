@@ -147,86 +147,96 @@ const Comunicados = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-          <div className="card w-full max-w-lg bg-white">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">{editId ? 'Editar Comunicado' : 'Novo Comunicado'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>&times;</span>
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-lg">
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <MessageSquare size={18} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">{editId ? 'Editar Comunicado' : 'Novo Comunicado'}</h3>
+                  <p className="text-xs text-slate-500">{editId ? 'Atualize os detalhes abaixo' : 'Preencha os campos para publicar'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <span className="text-xl leading-none">&times;</span>
               </button>
             </div>
-            
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="form-group">
-                <label className="form-label">Título</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="form-control" 
-                  placeholder="Título do comunicado" 
-                  value={formData.titulo} 
-                  onChange={e => setFormData({...formData, titulo: e.target.value})} 
-                />
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+            <div className="modal-body">
+              <form id="form-comunicado" onSubmit={handleSave} className="space-y-4">
                 <div className="form-group">
-                  <label className="form-label">Tipo</label>
-                  <select 
+                  <label className="form-label">Título</label>
+                  <input
+                    type="text"
+                    required
                     className="form-control"
-                    value={formData.tipo}
-                    onChange={e => setFormData({...formData, tipo: e.target.value})}
-                  >
-                    <option value="aviso">Aviso</option>
-                    <option value="circular">Circular</option>
-                    <option value="convocatoria">Convocatória</option>
-                    <option value="informacao">Informação</option>
-                  </select>
+                    placeholder="Título do comunicado"
+                    value={formData.titulo}
+                    onChange={e => setFormData({...formData, titulo: e.target.value})}
+                  />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Estado</label>
-                  <select 
-                    className="form-control"
-                    value={formData.estado}
-                    onChange={e => setFormData({...formData, estado: e.target.value})}
-                  >
-                    <option value="rascunho">Rascunho</option>
-                    <option value="publicado">Publicado</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Conteúdo</label>
-                <textarea 
-                  className="form-control" 
-                  rows={5} 
-                  required
-                  placeholder="Escreva a mensagem aqui..."
-                  value={formData.conteudo} 
-                  onChange={e => setFormData({...formData, conteudo: e.target.value})} 
-                ></textarea>
-              </div>
 
-              <div className="form-group">
-                <label className="flex items-center gap-2 cursor-pointer mt-2">
-                  <input 
-                    type="checkbox" 
-                    checked={formData.urgente} 
-                    onChange={e => setFormData({...formData, urgente: e.target.checked})} 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label">Tipo</label>
+                    <div className="form-control-select-wrapper">
+                      <select className="form-control" value={formData.tipo} onChange={e => setFormData({...formData, tipo: e.target.value})}>
+                        <option value="aviso">Aviso</option>
+                        <option value="circular">Circular</option>
+                        <option value="convocatoria">Convocatória</option>
+                        <option value="informacao">Informação</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Estado</label>
+                    <div className="form-control-select-wrapper">
+                      <select className="form-control" value={formData.estado} onChange={e => setFormData({...formData, estado: e.target.value})}>
+                        <option value="rascunho">Rascunho</option>
+                        <option value="publicado">Publicado</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Conteúdo</label>
+                  <textarea
+                    className="form-control"
+                    rows={5}
+                    required
+                    placeholder="Escreva a mensagem aqui..."
+                    value={formData.conteudo}
+                    onChange={e => setFormData({...formData, conteudo: e.target.value})}
+                  ></textarea>
+                </div>
+
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-red-100 bg-red-50 cursor-pointer hover:bg-red-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={formData.urgente}
+                    onChange={e => setFormData({...formData, urgente: e.target.checked})}
                     className="w-4 h-4 text-red-600 rounded border-gray-300"
                   />
-                  <span className="text-sm font-medium text-red-700">Marcar como Urgente</span>
+                  <div>
+                    <span className="text-sm font-semibold text-red-700">Marcar como Urgente</span>
+                    <p className="text-xs text-red-500">Será destacado visualmente para todos os membros</p>
+                  </div>
                 </label>
-              </div>
+              </form>
+            </div>
 
-              <div className="flex gap-2 mt-8 pt-4 border-t">
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline flex-1">Cancelar</button>
-                <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">
-                  {isSubmitting ? 'A guardar...' : (editId ? 'Atualizar' : 'Publicar Comunicado')}
-                </button>
-              </div>
-            </form>
+            <div className="modal-footer">
+              <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline">Cancelar</button>
+              <button type="submit" form="form-comunicado" disabled={isSubmitting} className="btn btn-primary">
+                {isSubmitting ? 'A guardar...' : (editId ? 'Atualizar' : 'Publicar Comunicado')}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -47,10 +47,12 @@ const resumo = async (req, res, next) => {
           ), 0) as pendentes,
           
           (SELECT COALESCE(SUM(valor), 0) FROM pagamentos WHERE estado = 'pago' AND ano = params.ano) as total_cobrado_ano,
+          (SELECT COALESCE(SUM(CASE WHEN p.valor >= 1000 THEN 1000 ELSE p.valor END), 0) FROM pagamentos p WHERE p.estado = 'pago' AND p.ano = params.ano) as total_quotas_cobradas,
+          (SELECT COALESCE(SUM(CASE WHEN p.valor > 1000 THEN p.valor - 1000 ELSE 0 END), 0) FROM pagamentos p WHERE p.estado = 'pago' AND p.ano = params.ano) as total_fundo_social_cobrado,
           
           -- Total debt value in the selected year
           COALESCE((
-            SELECT SUM(missing.missing_months) * COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000)
+            SELECT SUM(missing.missing_months * (COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000) + CASE WHEN m.fundo_social = true THEN 4000 ELSE 0 END))
             FROM membros m
             CROSS JOIN params
             LEFT JOIN LATERAL (
@@ -61,7 +63,37 @@ const resumo = async (req, res, next) => {
                 AND MAKE_DATE(params.ano, gs.mes, 1) >= DATE_TRUNC('month', m.data_admissao)
             ) missing ON true
             WHERE m.estado IN ('ativo', 'suspenso')
-          ), 0) as total_divida_ano
+          ), 0) as total_divida_ano,
+
+          -- Outstanding quota debt in the selected year
+          COALESCE((
+            SELECT SUM(missing.missing_months * COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000))
+            FROM membros m
+            CROSS JOIN params
+            LEFT JOIN LATERAL (
+              SELECT COALESCE(COUNT(*), 0) as missing_months
+              FROM generate_series(1, params.max_mes) AS gs(mes)
+              LEFT JOIN pagamentos pm ON pm.membro_id = m.id AND pm.ano = params.ano AND pm.mes = gs.mes
+              WHERE pm.id IS NULL 
+                AND MAKE_DATE(params.ano, gs.mes, 1) >= DATE_TRUNC('month', m.data_admissao)
+            ) missing ON true
+            WHERE m.estado IN ('ativo', 'suspenso')
+          ), 0) as total_quota_divida_ano,
+
+          -- Outstanding social fund debt in the selected year
+          COALESCE((
+            SELECT SUM(missing.missing_months * CASE WHEN m.fundo_social = true THEN 4000 ELSE 0 END)
+            FROM membros m
+            CROSS JOIN params
+            LEFT JOIN LATERAL (
+              SELECT COALESCE(COUNT(*), 0) as missing_months
+              FROM generate_series(1, params.max_mes) AS gs(mes)
+              LEFT JOIN pagamentos pm ON pm.membro_id = m.id AND pm.ano = params.ano AND pm.mes = gs.mes
+              WHERE pm.id IS NULL 
+                AND MAKE_DATE(params.ano, gs.mes, 1) >= DATE_TRUNC('month', m.data_admissao)
+            ) missing ON true
+            WHERE m.estado IN ('ativo', 'suspenso')
+          ), 0) as total_fundo_social_divida_ano
         FROM params
       `, [ano]),
       // Financeiro do mês atual

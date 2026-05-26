@@ -45,22 +45,50 @@ const getReportData = async (tipo, ano) => {
   switch (tipo) {
     case 'membros':
       return query(`
-        SELECT m.id, m.nome_completo, m.nif, m.telefone, m.email, d.nome as departamento, m.estado
+        SELECT m.nome_completo, m.nif, m.telefone, m.email, d.nome as departamento, m.estado
         FROM membros m
         LEFT JOIN departamentos d ON d.id = m.departamento_id
         ORDER BY m.nome_completo
       `).then((result) => result.rows);
     case 'quotas_divida':
       return query(`
-        SELECT p.id, m.nome_completo, p.mes, p.ano, p.valor, p.estado
-        FROM pagamentos p
-        LEFT JOIN membros m ON m.id = p.membro_id
-        WHERE p.ano = $1 AND p.estado <> 'pago'
-        ORDER BY p.ano, p.mes
+        WITH cfg AS (
+          SELECT COALESCE((SELECT valor_mensal FROM quotas_config WHERE ativo = true ORDER BY data_inicio DESC LIMIT 1), 1000) as valor_mensal
+        ), params AS (
+          SELECT
+            $1::integer as ano,
+            CASE
+              WHEN $1::integer < EXTRACT(YEAR FROM NOW())::integer THEN 12
+              WHEN $1::integer = EXTRACT(YEAR FROM NOW())::integer THEN GREATEST(0, EXTRACT(MONTH FROM NOW())::integer - 1)
+              ELSE 0
+            END as max_mes
+        )
+        SELECT
+          m.nome_completo,
+          m.numero_membro,
+          COALESCE(COUNT(p.id) FILTER (WHERE p.estado IN ('pendente','atrasado') AND p.mes <= params.max_mes), 0) +
+            COALESCE(missing.missing_months, 0) as meses_nao_pagas,
+          COALESCE(SUM(p.valor) FILTER (WHERE p.estado IN ('pendente','atrasado') AND p.mes <= params.max_mes), 0) +
+            COALESCE(missing.missing_months * (cfg.valor_mensal + CASE WHEN m.fundo_social = true THEN 4000 ELSE 0 END), 0) as total_divida
+        FROM membros m
+        CROSS JOIN cfg
+        CROSS JOIN params
+        LEFT JOIN pagamentos p ON p.membro_id = m.id AND p.ano = params.ano
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(COUNT(*) FILTER (WHERE pm.id IS NULL), 0) as missing_months
+          FROM generate_series(1, params.max_mes) AS gs(mes)
+          LEFT JOIN pagamentos pm ON pm.membro_id = m.id AND pm.ano = params.ano AND pm.mes = gs.mes
+          WHERE MAKE_DATE(params.ano, gs.mes, 1) >= DATE_TRUNC('month', m.data_admissao)
+        ) missing ON true
+        WHERE m.estado = 'ativo'
+        GROUP BY m.id, m.nome_completo, m.numero_membro, m.fundo_social, missing.missing_months, cfg.valor_mensal
+        HAVING COALESCE(SUM(p.valor) FILTER (WHERE p.estado IN ('pendente','atrasado') AND p.mes <= params.max_mes), 0) +
+            COALESCE(missing.missing_months * (cfg.valor_mensal + CASE WHEN m.fundo_social = true THEN 4000 ELSE 0 END), 0) > 0
+        ORDER BY total_divida DESC, m.nome_completo
       `, [ano]).then((result) => result.rows);
     case 'quotas_pagas':
       return query(`
-        SELECT p.id, m.nome_completo, p.mes, p.ano, p.valor, p.estado
+        SELECT m.nome_completo, p.mes, p.ano, p.valor, p.estado
         FROM pagamentos p
         LEFT JOIN membros m ON m.id = p.membro_id
         WHERE p.ano = $1 AND p.estado = 'pago'
@@ -124,12 +152,12 @@ router.get('/export', authenticate, authorize('relatorios:read'), async (req, re
     }
 
     doc.font('Helvetica-Bold')
-       .fontSize(14)
-       .text('SINDICATO DOS FUNCIONÁRIOS DA DGCI', 100, 40)
-       .fontSize(10)
-       .font('Helvetica')
-       .text('Av. Combatentes da Liberdade da Pátria, Bissau', 100, 58)
-       .text('Email: sindicatodgci@gmail.com', 100, 72);
+      .fontSize(14)
+      .text('SINDICATO DOS FUNCIONÁRIOS DA DGCI', 100, 40)
+      .fontSize(10)
+      .font('Helvetica')
+      .text('Av. Combatentes da Liberdade da Pátria, Bissau', 100, 58)
+      .text('Email: sindicatodgci@gmail.com', 100, 72);
 
     doc.moveDown(3);
 
@@ -147,7 +175,7 @@ router.get('/export', authenticate, authorize('relatorios:read'), async (req, re
         if (value === null || value === undefined) return '';
         if (value instanceof Date) return new Date(value).toLocaleDateString('pt-PT');
         if (typeof value === 'number' && (field === 'valor' || field === 'receitas' || field === 'despesas')) {
-            return new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF' }).format(value);
+          return new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF' }).format(value);
         }
         return String(value);
       }));

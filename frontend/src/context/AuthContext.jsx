@@ -3,13 +3,19 @@ import api from '../services/api';
 
 const AuthContext = createContext();
 
+const getStoredToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+const clearStoredToken = () => {
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('token');
+      const token = getStoredToken();
       if (token) {
         try {
           const { data } = await api.get('/auth/me');
@@ -17,7 +23,7 @@ export const AuthProvider = ({ children }) => {
             setUser(data.data);
           }
         } catch (error) {
-          localStorage.removeItem('token');
+          clearStoredToken();
           setUser(null);
         }
       }
@@ -26,10 +32,20 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, remember = false) => {
     const { data } = await api.post('/auth/login', { email, password });
     if (data.success) {
-      localStorage.setItem('token', data.token);
+      if (remember) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('rememberMe', 'true');
+        localStorage.setItem('rememberedEmail', email);
+        sessionStorage.removeItem('token');
+      } else {
+        sessionStorage.setItem('token', data.token);
+        localStorage.removeItem('rememberMe');
+        localStorage.removeItem('rememberedEmail');
+        localStorage.removeItem('token');
+      }
       setUser(data.user);
       return true;
     }
@@ -37,7 +53,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    clearStoredToken();
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('rememberedEmail');
     setUser(null);
     window.location.href = '/login';
   };
@@ -46,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     if (!user) return false;
     // Administrador tem acesso a tudo
     if (user.perfil === 'administrador') return true;
-    
+
     // Simplificando permissões no frontend (verificação real no backend)
     const roleMap = {
       presidente: ['read', 'create', 'update', 'delete'],
@@ -55,7 +73,7 @@ export const AuthProvider = ({ children }) => {
       operador: ['read'],
       auditor: ['read']
     };
-    
+
     const perms = roleMap[user.perfil] || [];
     return perms.some(p => permission.includes(p) || p === 'read');
   };

@@ -97,7 +97,7 @@ const MembroDetalhe = () => {
 
           {/* Info Principal */}
           <div className="flex-1">
-            <div className="grid grid-cols-3 gap-8">
+            <div className="grid grid-cols-4 gap-8">
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cargo / Função</p>
                 <p className="font-medium text-gray-900 mt-1">{membro.cargo_nome || membro.funcao_cargo || 'N/A'}</p>
@@ -105,6 +105,12 @@ const MembroDetalhe = () => {
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Departamento</p>
                 <p className="font-medium text-gray-900 mt-1">{membro.departamento_nome || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fundo Social</p>
+                <span className={`badge mt-1 ${membro.fundo_social ? 'badge-success bg-purple-100 text-purple-700 border-purple-200' : 'badge-neutral bg-slate-100 text-slate-500'}`}>
+                  {membro.fundo_social ? 'Inscrito' : 'Não Inscrito'}
+                </span>
               </div>
               <div>
                 <span className={`badge ${membro.estado === 'ativo' ? 'badge-success' : 'badge-neutral'}`}>
@@ -226,6 +232,20 @@ const MembroDetalhe = () => {
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Estado</p>
                 <p className="font-medium text-gray-900 mt-2 capitalize">{membro.estado}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fundo Social</p>
+                <p className="font-medium text-gray-900 mt-2">
+                  {membro.fundo_social ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Inscrito(a)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Não Inscrito(a)
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
           )}
