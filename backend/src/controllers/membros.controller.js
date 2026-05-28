@@ -9,6 +9,39 @@ const gerarNumeroMembro = async () => {
   return `SF-DGCI-${ano}-${seq}`;
 };
 
+/** GET /api/membros/:id/qr */
+const obterQR = async (req, res, next) => {
+  try {
+    const result = await query('SELECT numero_membro FROM membros WHERE id = $1', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Membro não encontrado' });
+    const numero = result.rows[0].numero_membro;
+    const QR = require('qrcode');
+    const url = `https://www.sfdgci.co.mz/membro/${encodeURIComponent(numero)}`;
+    const svg = await QR.toString(url, { type: 'svg', color: { dark: '#072a52', light: '#ffffff' } });
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.send(svg);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** GET /api/membros/qr/numero/:numero */
+const obterQRByNumero = async (req, res, next) => {
+  try {
+    const numeroParam = req.params.numero;
+    const result = await query('SELECT id, numero_membro FROM membros WHERE numero_membro = $1', [numeroParam]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Membro não encontrado' });
+    const numero = result.rows[0].numero_membro;
+    const QR = require('qrcode');
+    const url = `https://www.sfdgci.co.mz/membro/${encodeURIComponent(numero)}`;
+    const svg = await QR.toString(url, { type: 'svg', color: { dark: '#072a52', light: '#ffffff' } });
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.send(svg);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const nextNumero = async (req, res, next) => {
   try {
     const numero = await gerarNumeroMembro();
@@ -367,4 +400,4 @@ const obterCartao = async (req, res, next) => {
   }
 };
 
-module.exports = { listar, obter, criar, atualizar, eliminar, pagamentosMembro, estatisticas, obterCartao, nextNumero };
+module.exports = { listar, obter, criar, atualizar, eliminar, pagamentosMembro, estatisticas, obterCartao, nextNumero, obterQR, obterQRByNumero };

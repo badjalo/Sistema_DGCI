@@ -35,6 +35,8 @@ router.get('/estatisticas', authenticate, authorize('membros:read'), ctrl.estati
 router.get('/', authenticate, authorize('membros:read'), ctrl.listar);
 router.get('/next-numero', authenticate, authorize('membros:create'), ctrl.nextNumero);
 router.get('/:id/cartao', authenticate, authorize('membros:read'), ctrl.obterCartao);
+router.get('/:id/qr', authenticate, authorize('membros:read'), ctrl.obterQR);
+router.get('/qr/numero/:numero', authenticate, authorize('membros:read'), ctrl.obterQRByNumero);
 router.get('/:id/pagamentos', authenticate, authorize('membros:read', 'quotas:read'), ctrl.pagamentosMembro);
 router.get('/:id', authenticate, authorize('membros:read'), ctrl.obter);
 router.post('/', authenticate, authorize('membros:create'), upload.single('foto'), ctrl.criar);

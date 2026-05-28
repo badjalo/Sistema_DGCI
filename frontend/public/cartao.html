@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Exemplo Cartão SF-DGCI — Frente / Verso</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="cartao.css">
+    <style>
+        body {
+            margin: 0;
+            background: #e9eef4;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            font-family: 'Plus Jakarta Sans', system-ui, Arial
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="wrap">
+        <section class="card-stage">
+            <!-- FRONT -->
+            <div class="card card--front is-visible" id="cardFront">
+                <div class="card-inner">
+                    <div class="front-top">
+                        <div class="logo-area">
+                            <img src="assets/sf-dgci-logo.svg" alt="SF-DGCI logo" class="logo" />
+                        </div>
+                        <div class="org-name">SINDICATO DOS FUNCIONÁRIOS DA DIREÇÃO-GERAL DAS CONTRIBUIÇÕES E IMPOSTOS
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="photo-col">
+                            <div class="photo-frame">
+                                <img id="fotoMembro" src="assets/member.svg" alt="Foto do titular" />
+                            </div>
+                        </div>
+
+                        <div class="details-col">
+                            <div class="card-title">CARTÃO DE MEMBRO</div>
+
+                            <div class="fields">
+                                <div class="field"><span class="label">Nome</span><span id="nomeMembro"
+                                        class="value">JOÃO DA
+                                        COSTA</span></div>
+                                <div class="field"><span class="label">Nº de Membro</span><span id="numeroMembro"
+                                        class="value">SF-DGCI-2025-000123</span></div>
+                                <div class="field"><span class="label">Categoria</span><span id="categoriaMembro"
+                                        class="value">EFETIVO</span></div>
+                                <div class="field"><span class="label">Profissão</span><span id="profissaoMembro"
+                                        class="value">Auditor
+                                        Fiscal</span></div>
+                                <div class="field"><span class="label">Data de Admissão</span><span id="admissaoMembro"
+                                        class="value">15/05/2024</span></div>
+                                <div class="field"><span class="label">Validade</span><span id="validadeMembro"
+                                        class="value">31/12/2026</span></div>
+                            </div>
+
+                            <div class="signatures">
+                                <div class="sig">
+                                    <img src="assets/signatura_titular.svg" alt="assinatura" />
+                                    <div class="sig-label">Assinatura do Titular</div>
+                                </div>
+                                <div class="sig">
+                                    <img src="assets/signatura_presidente.svg" alt="assinatura" />
+                                    <div class="sig-label">Assinatura do Presidente do Sindicato</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="side-band">
+                            <div class="qr">
+                                <img id="qrSmall" src="/api/membros/qr/numero/SF-DGCI-2025-000123" alt="QR code" />
+                            </div>
+                            <div class="validate">VÁLIDO ATÉ<br /><strong>31/12/2026</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="watermark front-watermark"></div>
+                </div>
+            </div>
+
+            <!-- BACK -->
+            <div class="card card--back" id="cardBack">
+                <div class="card-inner">
+                    <div class="back-header">
+                        <div class="logo-small"><img src="assets/sf-dgci-logo.svg" alt="logo" /></div>
+                        <div class="back-org">SINDICATO DOS FUNCIONÁRIOS DA DIREÇÃO-GERAL DAS CONTRIBUIÇÕES E IMPOSTOS
+                        </div>
+                        <div class="back-member">Nº DE MEMBRO<br /><strong id="backNumero">SF-DGCI-2025-000123</strong>
+                        </div>
+                    </div>
+
+                    <div class="back-body">
+                        <div class="back-left">
+                            <h3>ESTE CARTÃO É PESSOAL E INTRANSMISSÍVEL</h3>
+                            <p>Confere ao titular o direito de usufruir de todos os benefícios e serviços
+                                disponibilizados pelo Sindicato dos Funcionários da DGCI, nos termos dos Estatutos e
+                                Regulamentos em vigor.</p>
+                        </div>
+
+                        <div class="back-right">
+                            <div class="qr-large"><img id="qrLarge" src="/api/membros/qr/numero/SF-DGCI-2025-000123"
+                                    alt="qr"></div>
+                        </div>
+                    </div>
+
+                    <div class="back-footer">
+                        <div class="contact">Avenida da China, Edifício DGCI, CP 509, Maputo - Moçambique</div>
+                        <div class="contact">+258 21 365 700 &nbsp; • &nbsp; geral@sfdgci.co.mz &nbsp; • &nbsp;
+                            www.sfdgci.co.mz</div>
+                    </div>
+
+                    <div class="watermark back-watermark"></div>
+                </div>
+            </div>
+
+        </section>
+
+        <div class="controls">
+            <button id="flipBtn">Rodar Cartão</button>
+            <button id="downloadPdfBtn">Exportar PDF</button>
+        </div>
+    </main>
+
+    <script>
+        const front = document.getElementById('cardFront');
+        const back = document.getElementById('cardBack');
+        const flipBtn = document.getElementById('flipBtn');
+        flipBtn.addEventListener('click', () => {
+            front.classList.toggle('is-hidden');
+            back.classList.toggle('is-visible');
+        });
+        // Update QR and member number from query param (?id= or ?numero=). Supports optional ?token=Bearer
+        (function () {
+            const params = new URLSearchParams(location.search);
+            const token = params.get('token');
+            const idParam = params.get('id');
+            const numeroParam = params.get('numero');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+            const fetchJson = async (url) => {
+                const res = await fetch(url, { headers });
+                if (!res.ok) throw new Error(`Fetch error ${res.status}`);
+                return res.json();
+            };
+
+            const setQRByNumero = (numero) => {
+                const qrUrl = `/api/membros/qr/numero/${encodeURIComponent(numero)}`;
+                const qSmall = document.getElementById('qrSmall');
+                const qLarge = document.getElementById('qrLarge');
+                if (qSmall) qSmall.src = qrUrl;
+                if (qLarge) qLarge.src = qrUrl;
+            };
+
+            (async () => {
+                try {
+                    let membro = null;
+                    if (idParam) {
+                        const data = await fetchJson(`/api/membros/${encodeURIComponent(idParam)}`);
+                        membro = data.data;
+                    } else if (numeroParam) {
+                        const data = await fetchJson(`/api/membros?search=${encodeURIComponent(numeroParam)}&limit=1`);
+                        if (data.data && data.data.length) membro = data.data[0];
+                    }
+
+                    if (membro) {
+                        const numero = membro.numero_membro || numeroParam;
+                        document.getElementById('nomeMembro').textContent = membro.nome_completo || '';
+                        document.getElementById('numeroMembro').textContent = membro.numero_membro || '';
+                        document.getElementById('backNumero').textContent = membro.numero_membro || '';
+                        document.getElementById('categoriaMembro').textContent = membro.categoria || membro.estado || '';
+                        document.getElementById('profissaoMembro').textContent = membro.funcao_cargo || membro.cargo_nome || '';
+                        if (membro.data_admissao) document.getElementById('admissaoMembro').textContent = new Date(membro.data_admissao).toLocaleDateString('pt-PT');
+                        if (membro.validade) document.getElementById('validadeMembro').textContent = membro.validade;
+                        if (membro.foto_url) document.getElementById('fotoMembro').src = membro.foto_url;
+                        setQRByNumero(numero);
+                    } else if (numeroParam) {
+                        // fill with numero only
+                        document.getElementById('numeroMembro').textContent = numeroParam;
+                        document.getElementById('backNumero').textContent = numeroParam;
+                        setQRByNumero(numeroParam);
+                    }
+                } catch (err) {
+                    console.warn('Não foi possível carregar dados do membro:', err);
+                }
+            })();
+
+            // Download PDF button logic
+            (function () {
+                const params = new URLSearchParams(location.search);
+                const token = params.get('token');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                async function resolveId() {
+                    const idParam = params.get('id');
+                    const numeroParam = params.get('numero');
+                    if (idParam) return idParam;
+                    if (numeroParam) {
+                        const res = await fetch(`/api/membros?search=${encodeURIComponent(numeroParam)}&limit=1`, { headers });
+                        if (!res.ok) throw new Error('Não foi possível resolver número para id');
+                        const js = await res.json();
+                        if (js.data && js.data.length) return js.data[0].id;
+                    }
+                    // try reading visible nº
+                    const numEl = document.getElementById('numeroMembro');
+                    if (numEl && numEl.textContent) {
+                        const res = await fetch(`/api/membros?search=${encodeURIComponent(numEl.textContent)}&limit=1`, { headers });
+                        if (!res.ok) throw new Error('Não foi possível resolver número para id');
+                        const js = await res.json();
+                        if (js.data && js.data.length) return js.data[0].id;
+                    }
+                    throw new Error('ID do membro não encontrado');
+                }
+
+                document.getElementById('downloadPdfBtn').addEventListener('click', async () => {
+                    try {
+                        const id = await resolveId();
+                        const res = await fetch(`/api/membros/${encodeURIComponent(id)}/cartao`, { headers });
+                        if (!res.ok) {
+                            const text = await res.text();
+                            throw new Error(`Erro ao obter PDF: ${res.status} ${text}`);
+                        }
+                        const blob = await res.blob();
+                        const numero = document.getElementById('numeroMembro').textContent || id;
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `cartao_${numero}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                        alert('Falha ao baixar PDF: ' + err.message);
+                        console.error(err);
+                    }
+                });
+            })();
+    </script>
+</body>
+
+</html>
