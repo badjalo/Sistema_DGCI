@@ -29,12 +29,12 @@ const listarReceitas = async (req, res, next) => {
 /** POST /api/financeiro/receitas */
 const criarReceita = async (req, res, next) => {
   try {
-    const { descricao, valor, data_receita, categoria_id, banco_id, membro_id, referencia, observacoes } = req.body;
+    const { descricao, valor, data_receita, categoria_id, banco_id, membro_id, referencia, observacoes, metodo_pagamento } = req.body;
     if (!descricao || !valor) return res.status(400).json({ error: 'Descrição e valor são obrigatórios' });
     const result = await query(
-      `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, referencia, observacoes, registado_por)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [descricao, valor, data_receita || new Date(), categoria_id, banco_id, membro_id, referencia, observacoes, req.user.id]
+      `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, referencia, observacoes, registado_por, metodo_pagamento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [descricao, valor, data_receita || new Date(), categoria_id, banco_id, membro_id, referencia, observacoes, req.user.id, metodo_pagamento]
     );
     if (banco_id) await query('UPDATE bancos SET saldo_atual = saldo_atual + $1 WHERE id = $2', [valor, banco_id]);
     res.status(201).json({ success: true, data: result.rows[0] });
@@ -69,12 +69,12 @@ const listarDespesas = async (req, res, next) => {
 /** POST /api/financeiro/despesas */
 const criarDespesa = async (req, res, next) => {
   try {
-    const { descricao, valor, data_despesa, categoria_id, banco_id, beneficiario, referencia, observacoes } = req.body;
+    const { descricao, valor, data_despesa, categoria_id, banco_id, beneficiario, referencia, observacoes, metodo_pagamento } = req.body;
     if (!descricao || !valor) return res.status(400).json({ error: 'Descrição e valor são obrigatórios' });
     const result = await query(
-      `INSERT INTO despesas (descricao, valor, data_despesa, categoria_id, banco_id, beneficiario, referencia, observacoes, registado_por)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [descricao, valor, data_despesa || new Date(), categoria_id, banco_id, beneficiario, referencia, observacoes, req.user.id]
+      `INSERT INTO despesas (descricao, valor, data_despesa, categoria_id, banco_id, beneficiario, referencia, observacoes, registado_por, metodo_pagamento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [descricao, valor, data_despesa || new Date(), categoria_id, banco_id, beneficiario, referencia, observacoes, req.user.id, metodo_pagamento]
     );
     if (banco_id) await query('UPDATE bancos SET saldo_atual = saldo_atual - $1 WHERE id = $2', [valor, banco_id]);
     res.status(201).json({ success: true, data: result.rows[0] });

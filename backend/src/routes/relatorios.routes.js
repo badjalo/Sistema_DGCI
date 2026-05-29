@@ -93,7 +93,13 @@ const getReportData = async (tipo, ano) => {
         LEFT JOIN membros m ON m.id = p.membro_id
         WHERE p.ano = $1 AND p.estado = 'pago'
         ORDER BY p.ano, p.mes
-      `, [ano]).then((result) => result.rows);
+      `, [ano]).then((result) => {
+        const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        return result.rows.map(row => ({
+          ...row,
+          mes: meses[row.mes - 1] || row.mes
+        }));
+      });
     case 'movimentos':
       return query(`
         SELECT 'Receita' as tipo, r.descricao, r.valor, r.data_receita as data, cf.nome as categoria_nome
@@ -109,9 +115,8 @@ const getReportData = async (tipo, ano) => {
       `, [ano]).then((result) => result.rows);
     case 'auditoria':
       return query(`
-        SELECT a.id, a.acao, a.descricao, u.nome as utilizador, a.criado_em
+        SELECT a.acao, a.entidade as modulo, a.utilizador_nome as utilizador, a.ip_address as ip, a.criado_em as data
         FROM auditoria_logs a
-        LEFT JOIN utilizadores u ON u.id = a.utilizador_id
         ORDER BY a.criado_em DESC
         LIMIT 1000
       `).then((result) => result.rows);

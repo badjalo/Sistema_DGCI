@@ -12,6 +12,7 @@ const Financeiro = () => {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('todas');
   const [pesquisa, setPesquisa] = useState('');
+  const [categoriasLista, setCategoriasLista] = useState([]);
 
   const formatXOF = (val) => new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF' }).format(val || 0);
   const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -53,6 +54,7 @@ const Financeiro = () => {
 
   useEffect(() => {
     fetchDados();
+    api.get('/financeiro/categorias').then(res => setCategoriasLista(res.data.data || [])).catch(console.error);
   }, [fetchDados, filtro]);
 
   const mesAnterior = () => {
@@ -71,6 +73,8 @@ const Financeiro = () => {
     tipo: 'despesa',
     descricao: '',
     valor: '',
+    categoria_id: '',
+    metodo_pagamento: 'Dinheiro',
     data_movimento: new Date().toISOString().split('T')[0]
   });
 
@@ -82,12 +86,14 @@ const Financeiro = () => {
       const payload = {
         descricao: formData.descricao,
         valor: formData.valor,
+        categoria_id: formData.categoria_id || undefined,
+        metodo_pagamento: formData.metodo_pagamento,
         [formData.tipo === 'receita' ? 'data_receita' : 'data_despesa']: formData.data_movimento
       };
       await api.post(`/financeiro/${formData.tipo}s`, payload);
       toast.success('Movimento registado com sucesso!');
       setShowModal(false);
-      setFormData({ tipo: 'despesa', descricao: '', valor: '', data_movimento: new Date().toISOString().split('T')[0] });
+      setFormData({ tipo: 'despesa', descricao: '', valor: '', categoria_id: '', metodo_pagamento: 'Dinheiro', data_movimento: new Date().toISOString().split('T')[0] });
       fetchDados();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Erro ao registar movimento');
@@ -299,7 +305,7 @@ const Financeiro = () => {
                   <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Data</th>
                   <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Descrição</th>
                   <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Categoria</th>
-                  <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Documento</th>
+                  <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Método Pag.</th>
                   <th className="text-right text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Valor</th>
                   <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Tipo</th>
                 </tr>
@@ -316,9 +322,7 @@ const Financeiro = () => {
                       <td className="px-6 py-3 text-sm text-slate-700">{t.descricao}</td>
                       <td className="px-6 py-3 text-sm"><span className="text-slate-600">{t.categoria_nome || 'Geral'}</span></td>
                       <td className="px-6 py-3 text-sm">
-                        {t.documento_referencia
-                          ? <span className="flex items-center gap-1 text-blue-600 cursor-pointer hover:text-blue-700"><FileText size={14} /> {t.documento_referencia}</span>
-                          : <span className="text-slate-400">—</span>}
+                        <span className="text-slate-600">{t.metodo_pagamento || 'N/D'}</span>
                       </td>
                       <td className="px-6 py-3 text-sm font-bold text-right">
                         <span className={t.tipo === 'receita' ? 'text-green-600' : 'text-red-600'}>
@@ -390,6 +394,33 @@ const Financeiro = () => {
                     value={formData.descricao}
                     onChange={e => setFormData({ ...formData, descricao: e.target.value })}
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label">Categoria</label>
+                    <select
+                      className="form-control"
+                      value={formData.categoria_id}
+                      onChange={e => setFormData({ ...formData, categoria_id: e.target.value })}
+                    >
+                      <option value="">Selecione...</option>
+                      {categoriasLista.filter(c => c.tipo === formData.tipo).map(c => (
+                        <option key={c.id} value={c.id}>{c.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Método de Pagamento</label>
+                    <select
+                      className="form-control"
+                      value={formData.metodo_pagamento}
+                      onChange={e => setFormData({ ...formData, metodo_pagamento: e.target.value })}
+                    >
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="Transferência">Transferência</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

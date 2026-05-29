@@ -143,11 +143,14 @@ const obter = async (req, res, next) => {
 /** POST /api/membros */
 const criar = async (req, res, next) => {
   try {
-    const {
+    let {
       nome_completo, sexo, data_nascimento, estado_civil: raw_estado_civil, nif,
       bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id,
       departamento_id, data_admissao, estado, observacoes, fundo_social
     } = req.body;
+
+    nif = nif && nif.trim() !== '' ? nif.trim() : null;
+    email = email && email.trim() !== '' ? email.trim() : null;
 
     const estado_civil = normalizeEstadoCivil(raw_estado_civil);
 
@@ -178,7 +181,10 @@ const criar = async (req, res, next) => {
       }
     }
 
-    const foto_url = req.file ? `/uploads/fotos/${req.file.filename}` : null;
+    const fotoFile = req.files && req.files['foto'] && req.files['foto'][0];
+    const assinaturaFile = req.files && req.files['assinatura'] && req.files['assinatura'][0];
+    const foto_url = fotoFile ? `/uploads/fotos/${fotoFile.filename}` : null;
+    const assinatura_url = assinaturaFile ? `/uploads/assinaturas/${assinaturaFile.filename}` : null;
 
     // gerar número do membro se não foi fornecido
     const numero_membro = req.body.numero_membro && req.body.numero_membro.trim() ? req.body.numero_membro.trim() : await gerarNumeroMembro();
@@ -208,12 +214,12 @@ const criar = async (req, res, next) => {
 
     const result = await query(
       `INSERT INTO membros 
-       (numero_membro, nome_completo, foto_url, sexo, data_nascimento, estado_civil, nif,
+       (numero_membro, nome_completo, foto_url, assinatura_url, sexo, data_nascimento, estado_civil, nif,
         bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id, departamento_id,
         data_admissao, estado, observacoes, fundo_social)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        RETURNING *`,
-      [numero_membro, nome_completo, foto_url, sexo, data_nascimento, estado_civil || 'solteiro', nif,
+      [numero_membro, nome_completo, foto_url, assinatura_url, sexo, data_nascimento, estado_civil || 'solteiro', nif,
         bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id || null,
         departamento_id || null, data_admissao || new Date(), estado || 'ativo', observacoes, fundo_social === 'true' || fundo_social === true]
     );
@@ -235,15 +241,21 @@ const criar = async (req, res, next) => {
 /** PUT /api/membros/:id */
 const atualizar = async (req, res, next) => {
   try {
-    const {
+    let {
       nome_completo, sexo, data_nascimento, estado_civil: raw_estado_civil, nif,
       bi_passaporte, telefone, email, morada, funcao_cargo, cargo_id,
       departamento_id, data_admissao, estado, observacoes, historico_profissional, fundo_social
     } = req.body;
 
+    if (nif !== undefined) nif = nif && nif.trim() !== '' ? nif.trim() : null;
+    if (email !== undefined) email = email && email.trim() !== '' ? email.trim() : null;
+
     const estado_civil = normalizeEstadoCivil(raw_estado_civil);
 
-    const foto_url = req.file ? `/uploads/fotos/${req.file.filename}` : undefined;
+    const fotoFile = req.files && req.files['foto'] && req.files['foto'][0];
+    const assinaturaFile = req.files && req.files['assinatura'] && req.files['assinatura'][0];
+    const foto_url = fotoFile ? `/uploads/fotos/${fotoFile.filename}` : undefined;
+    const assinatura_url = assinaturaFile ? `/uploads/assinaturas/${assinaturaFile.filename}` : undefined;
 
     const existing = await query('SELECT departamento_id, estado FROM membros WHERE id = $1', [req.params.id]);
     if (!existing.rows.length) {
@@ -286,6 +298,7 @@ const atualizar = async (req, res, next) => {
       observacoes, historico_profissional
     };
     if (foto_url) fields.foto_url = foto_url;
+    if (assinatura_url) fields.assinatura_url = assinatura_url;
     if (fundo_social !== undefined) {
       fields.fundo_social = fundo_social === 'true' || fundo_social === true;
     }

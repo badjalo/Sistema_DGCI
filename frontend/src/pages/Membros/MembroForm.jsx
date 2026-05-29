@@ -1,106 +1,138 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
-import { Save, X, User } from 'lucide-react';
+import { Save, X, User, Camera, RefreshCw, Check, PenTool, Trash2, Upload } from 'lucide-react';
 
+/* ─── Camera Modal ──────────────────────────────────────────── */
+const CameraModal = ({ onCapture, onClose }) => {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  const [captured, setCaptured] = useState(null);
+
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 480, facingMode: 'user' } })
+      .then(stream => {
+        streamRef.current = stream;
+        if (videoRef.current) { videoRef.current.srcObject = stream; setReady(true); }
+      })
+      .catch(() => toast.error('Sem acesso à câmara'));
+    return () => { if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); };
+  }, []);
+
+  const shoot = () => {
+    const v = videoRef.current; const c = canvasRef.current;
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    setCaptured(c.toDataURL('image/jpeg', 0.92));
+  };
+
+  const retake = () => setCaptured(null);
+
+  const confirm = () => {
+    const c = canvasRef.current;
+    c.toBlob(blob => { onCapture(blob, captured); onClose(); }, 'image/jpeg', 0.92);
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ background:'#1e293b', borderRadius:16, padding:24, width:520, maxWidth:'95vw' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <h3 style={{ color:'#fff', margin:0, fontSize:18, fontWeight:700 }}>📷 Tirar Foto</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'#94a3b8', cursor:'pointer' }}><X size={22}/></button>
+        </div>
+
+        <div style={{ position:'relative', borderRadius:12, overflow:'hidden', background:'#000', aspectRatio:'4/3' }}>
+          <video ref={videoRef} autoPlay playsInline muted
+            style={{ width:'100%', height:'100%', objectFit:'cover', display: captured ? 'none' : 'block' }} />
+          {captured && <img src={captured} alt="captura" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
+          <canvas ref={canvasRef} style={{ display:'none' }} />
+        </div>
+
+        <div style={{ display:'flex', gap:12, marginTop:16, justifyContent:'center' }}>
+          {!captured ? (
+            <button onClick={shoot} disabled={!ready}
+              style={{ background:'#3b82f6', color:'#fff', border:'none', borderRadius:10, padding:'10px 28px', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}>
+              <Camera size={18}/> Capturar
+            </button>
+          ) : (
+            <>
+              <button onClick={retake}
+                style={{ background:'#475569', color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}>
+                <RefreshCw size={16}/> Repetir
+              </button>
+              <button onClick={confirm}
+                style={{ background:'#22c55e', color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}>
+                <Check size={16}/> Usar esta foto
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+/* ─── Main Form ─────────────────────────────────────────────── */
 const MembroForm = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [departamentos, setDepartamentos] = useState([]);
   const [numeroMembro, setNumeroMembro] = useState('');
-
-  const [formData, setFormData] = useState({
-    nome_completo: '',
-    email: '',
-    telefone: '',
-    sexo: 'masculino',
-    data_nascimento: '',
-    estado_civil: 'solteiro',
-    morada: '',
-    nif: '',
-    numero_identificacao: '',
-    bi_passaporte: '',
-    nib: '',
-    departamento_id: '',
-    data_admissao: new Date().toISOString().split('T')[0],
-    estado: 'ativo',
-    fundo_social: false
-  });
+  const [showCamera, setShowCamera] = useState(false);
+  const [fotoBlob, setFotoBlob] = useState(null);
   const [preview, setPreview] = useState(null);
 
+
+  const [formData, setFormData] = useState({
+    nome_completo: '', email: '', telefone: '', sexo: 'masculino',
+    data_nascimento: '', estado_civil: 'solteiro', morada: '', nif: '',
+    numero_identificacao: '', bi_passaporte: '', nib: '', departamento_id: '',
+    data_admissao: new Date().toISOString().split('T')[0], estado: 'ativo', fundo_social: false
+  });
+
   useEffect(() => {
-    const fetchDepartamentos = async () => {
-      try {
-        const { data } = await api.get('/departamentos');
-        setDepartamentos(data.data);
-      } catch (error) {
-        toast.error('Erro ao carregar departamentos');
-      }
-    };
-    fetchDepartamentos();
-    // buscar próximo número de membro
-    const fetchNumero = async () => {
-      try {
-        const res = await api.get('/membros/next-numero');
-        if (res.data && res.data.numero) setNumeroMembro(res.data.numero);
-      } catch (err) {
-        // não bloquear formulário por falha aqui
-      }
-    };
-    fetchNumero();
+    api.get('/departamentos').then(({ data }) => setDepartamentos(data.data)).catch(() => toast.error('Erro ao carregar departamentos'));
+    api.get('/membros/next-numero').then(res => { if (res.data?.numero) setNumeroMembro(res.data.numero); }).catch(() => {});
   }, []);
 
   const handleChange = (e) => {
     const { name, value, files, type } = e.target;
     if (type === 'file') {
       const file = files[0];
-      setFormData(prev => ({ ...prev, foto: file }));
-      if (file) setPreview(URL.createObjectURL(file));
-      else setPreview(null);
+      if (file) { setFotoBlob(file); setPreview(URL.createObjectURL(file)); }
+      else { setFotoBlob(null); setPreview(null); }
+    } else if (name === 'telefone') {
+      setFormData(p => ({ ...p, [name]: formatPhone(value) }));
+    } else if (name === 'fundo_social') {
+      setFormData(p => ({ ...p, [name]: value === 'true' }));
     } else {
-      // format telefone on the fly
-      if (name === 'telefone') {
-        const formatted = formatPhone(value);
-        setFormData(prev => ({ ...prev, [name]: formatted }));
-      } else if (name === 'fundo_social') {
-        setFormData(prev => ({ ...prev, [name]: value === 'true' }));
-      } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
-      }
+      setFormData(p => ({ ...p, [name]: value }));
     }
   };
 
   const formatPhone = (input) => {
-    const digits = (input || '').replace(/\D/g, '');
-    if (!digits) return '';
-    if (digits.startsWith('245') && digits.length >= 12) {
-      return `+${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9, 12)}`;
-    }
-    // fallback grouping by 3
-    return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+    const d = (input || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.startsWith('245') && d.length >= 12) return `+${d.slice(0,3)} ${d.slice(3,6)} ${d.slice(6,9)} ${d.slice(9,12)}`;
+    return d.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
   };
+
+  const handleCameraCapture = (blob, dataUrl) => { setFotoBlob(blob); setPreview(dataUrl); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // NIF validation: if provided, must be 9 digits
-      const nifDigits = (formData.nif || '').replace(/\D/g, '');
-      if (nifDigits && nifDigits.length !== 9) {
-        toast.error('NIF inválido. Deve conter 9 dígitos.');
-        setLoading(false);
-        return;
-      }
-      // telefone validation: if provided, at least 9 digits
-      const telDigits = (formData.telefone || '').replace(/\D/g, '');
-      if (telDigits && telDigits.length < 9) {
-        toast.error('Telefone inválido. Insira pelo menos 9 dígitos.');
-        setLoading(false);
-        return;
-      }
+      const nifD = (formData.nif || '').replace(/\D/g, '');
+      if (nifD && nifD.length !== 9) { toast.error('NIF inválido. Deve conter 9 dígitos.'); return; }
+      const telD = (formData.telefone || '').replace(/\D/g, '');
+      if (telD && telD.length < 9) { toast.error('Telefone inválido. Insira pelo menos 9 dígitos.'); return; }
+
       const data = new FormData();
-      // incluir numero_membro gerado automaticamente
       data.append('nome_completo', formData.nome_completo);
       data.append('sexo', formData.sexo);
       data.append('data_nascimento', formData.data_nascimento || '');
@@ -117,13 +149,13 @@ const MembroForm = () => {
       data.append('estado', formData.estado || 'ativo');
       data.append('observacoes', formData.observacoes || '');
       data.append('fundo_social', formData.fundo_social);
-      if (formData.foto) data.append('foto', formData.foto);
+      if (fotoBlob) data.append('foto', fotoBlob, 'foto.jpg');
+
 
       await api.post('/membros', data, { headers: { 'Content-Type': 'multipart/form-data' } });
       toast.success('Membro registado com sucesso!');
       navigate('/membros');
     } catch (error) {
-      console.error('Erro ao registar membro:', error);
       toast.error(error.response?.data?.error || 'Erro ao registar membro');
     } finally {
       setLoading(false);
@@ -132,13 +164,14 @@ const MembroForm = () => {
 
   return (
     <div className="fade-in space-y-6 max-w-7xl mx-auto px-4">
+      {showCamera && <CameraModal onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />}
+
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2 text-slate-900">
-            <User size={32} className="text-blue-600" />
-            Registar Novo Membro
+            <User size={32} className="text-blue-600" /> Registar Novo Membro
           </h1>
-          <p className="text-slate-600 text-sm mt-2">Preencha os dados pessoais e profissionais do funcionário</p>
+          <p className="text-slate-600 text-sm mt-2">Preencha os dados e carregue a foto do membro</p>
         </div>
       </div>
 
@@ -149,19 +182,35 @@ const MembroForm = () => {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Photo Section */}
             <div className="lg:col-span-1">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-slate-400 text-3xl overflow-hidden border-4 border-slate-200">
-                  {preview ? (
-                    <img src={preview} alt="preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="font-bold">{formData.nome_completo ? formData.nome_completo.charAt(0).toUpperCase() : 'M'}</span>
-                  )}
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-36 h-36 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-slate-400 text-4xl overflow-hidden border-4 border-slate-200 shadow-md">
+                  {preview
+                    ? <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                    : <span className="font-bold text-blue-400">{formData.nome_completo ? formData.nome_completo.charAt(0).toUpperCase() : 'M'}</span>
+                  }
                 </div>
-                <label className="btn btn-outline w-full text-center text-sm justify-center cursor-pointer">
-                  Carregar Foto
+
+                {/* Câmara */}
+                <button type="button" onClick={() => setShowCamera(true)}
+                  className="btn btn-primary w-full text-sm justify-center"
+                  style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <Camera size={16}/> Tirar Foto
+                </button>
+
+                {/* Upload ficheiro */}
+                <label className="btn btn-outline w-full text-center text-sm justify-center cursor-pointer" style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <Upload size={15}/> Carregar Ficheiro
                   <input type="file" name="foto" accept="image/*" onChange={handleChange} className="hidden" />
                 </label>
-                <div className="w-full text-center">
+
+                {preview && (
+                  <button type="button" onClick={() => { setFotoBlob(null); setPreview(null); }}
+                    style={{ background:'none', border:'none', color:'#ef4444', cursor:'pointer', fontSize:12, display:'flex', alignItems:'center', gap:4 }}>
+                    <Trash2 size={13}/> Remover foto
+                  </button>
+                )}
+
+                <div className="w-full text-center mt-1">
                   <p className="text-xs text-slate-500 font-semibold">Nº de Membro</p>
                   <p className="text-lg font-bold text-blue-600 mt-1">{numeroMembro || 'Auto'}</p>
                 </div>
@@ -249,20 +298,10 @@ const MembroForm = () => {
                     const ativos = dep.membros_ativos || 0;
                     const limite = dep.limite_quadros || 0;
                     const isFull = limite > 0 && ativos >= limite;
-
                     let label = `${dep.nome} (${dep.sigla})`;
-                    if (limite > 0) {
-                      label += ` — ${ativos}/${limite} vagas`;
-                      if (isFull) label += ' (Esgotado ❌)';
-                    } else {
-                      label += ' — Ilimitado';
-                    }
-
-                    return (
-                      <option key={dep.id} value={dep.id} disabled={isFull}>
-                        {label}
-                      </option>
-                    );
+                    if (limite > 0) { label += ` — ${ativos}/${limite} vagas`; if (isFull) label += ' (Esgotado ❌)'; }
+                    else label += ' — Ilimitado';
+                    return <option key={dep.id} value={dep.id} disabled={isFull}>{label}</option>;
                   })}
                 </select>
               </div>
@@ -299,6 +338,8 @@ const MembroForm = () => {
             <textarea name="observacoes" value={formData.observacoes || ''} onChange={handleChange} className="form-control" rows="3"></textarea>
           </div>
         </div>
+
+
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4">

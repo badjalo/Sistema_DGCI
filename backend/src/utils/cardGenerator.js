@@ -93,65 +93,74 @@ async function drawFront(doc, membro, logoPath) {
   doc.text(membro.numero_membro || '-', photoX + mm(1.2), numberY + mm(5.2), { width: photoW - mm(2.4), align: 'left' });
 
   const headingY = leftY + mm(3.5);
-  const logoCircleSize = mm(13);
+  const logoCircleSize = mm(10);
   const logoCircleX = centerX + mm(2);
   const logoCircleY = headingY;
   doc.circle(logoCircleX + logoCircleSize / 2, logoCircleY + logoCircleSize / 2, logoCircleSize / 2).fill(WHITE).strokeColor(DARK_NAVY).lineWidth(0.8).stroke();
   if (logoPath) {
     try {
-      doc.image(logoPath, logoCircleX + mm(1.2), logoCircleY + mm(1.2), { width: logoCircleSize - mm(2.4) });
+      doc.image(logoPath, logoCircleX + mm(1), logoCircleY + mm(1), { width: logoCircleSize - mm(2) });
     } catch (e) { }
   }
 
-  const titleX = logoCircleX + logoCircleSize + mm(3);
-  doc.fillColor(DARK_NAVY).font('Helvetica-Bold').fontSize(6.2);
-  doc.text('SINDICATO DOS FUNCIONÁRIOS DA', titleX, headingY, { width: centerW - mm(10), align: 'left', lineGap: 0.5 });
-  doc.text('DIREÇÃO-GERAL DAS CONTRIBUIÇÕES E IMPOSTOS', { width: centerW - mm(10), align: 'left' });
+  const titleX = logoCircleX + logoCircleSize + mm(2);
+  doc.fillColor(DARK_NAVY).font('Helvetica-Bold').fontSize(5.8);
+  doc.text('SINDICATO DOS FUNCIONÁRIOS DA', titleX, headingY, { width: centerW - mm(14), align: 'left', lineGap: 0.5 });
+  doc.text('DIREÇÃO-GERAL DAS CONTRIBUIÇÕES E IMPOSTOS', { width: centerW - mm(14), align: 'left' });
 
-  const badgeY = headingY + mm(17);
-  doc.roundedRect(centerX + mm(2), badgeY, mm(28), mm(6), 4).fill(DARK_NAVY);
-  doc.fillColor(WHITE).font('Helvetica-Bold').fontSize(5.2);
-  doc.text('CARTÃO DE MEMBRO', centerX + mm(2), badgeY + mm(1.2), { width: mm(28), align: 'center' });
+  const badgeY = headingY + mm(12);
+  doc.roundedRect(centerX + mm(2), badgeY, mm(28), mm(4.5), 3).fill(DARK_NAVY);
+  doc.fillColor(WHITE).font('Helvetica-Bold').fontSize(4.5);
+  doc.text('CARTÃO DE MEMBRO', centerX + mm(2), badgeY + mm(1), { width: mm(28), align: 'center' });
 
-  const infoStartY = badgeY + mm(10);
-  const infoGap = mm(6.2);
+  const infoStartY = badgeY + mm(6);
+  const infoGap = mm(4.5);
   const profession = membro.profissao || membro.cargo_nome || membro.funcao_cargo || '—';
   const role = membro.funcao_cargo || membro.cargo_nome || '—';
   const service = membro.departamento_nome || '—';
   const admission = membro.data_admissao ? new Date(membro.data_admissao).toLocaleDateString('pt-PT') : '-';
-  const validity = membro.data_admissao ? new Date(new Date(membro.data_admissao).setFullYear(new Date(membro.data_admissao).getFullYear() + 1)).toLocaleDateString('pt-PT') : '-';
+  const validity = membro.data_admissao ? new Date(new Date(membro.data_admissao).setFullYear(new Date(membro.data_admissao).getFullYear() + 4)).toLocaleDateString('pt-PT') : '-';
 
   const details = [
     { label: 'Nome', value: membro.nome_completo || '-' },
-    { label: 'Profissão', value: profession },
+    { label: 'Validade', value: validity },
     { label: 'Função', value: role },
     { label: 'Serviço', value: service },
-    { label: 'Data de Admissão', value: admission },
-    { label: 'Validade', value: validity }
+    { label: 'Admissão', value: admission },
+    { label: 'Fundo Social', value: membro.fundo_social ? 'Inscrito' : 'Não Inscrito' }
   ];
 
+  const colWidth = (centerW - mm(4)) / 2;
   details.forEach((item, idx) => {
-    const y = infoStartY + idx * infoGap;
-    doc.fillColor(TEXT_LABEL).font('Helvetica-Bold').fontSize(4.8);
-    doc.text(`${item.label}:`, centerX + mm(2), y, { width: mm(22) });
-    doc.fillColor(TEXT_DARK).font('Helvetica').fontSize(5.8);
-    doc.text(item.value, centerX + mm(2), y + mm(3.5), { width: centerW - mm(4), align: 'left' });
+    const col = idx % 2;
+    const row = Math.floor(idx / 2);
+    const x = centerX + mm(2) + col * colWidth;
+    const y = infoStartY + row * infoGap;
+    
+    doc.fillColor(TEXT_LABEL).font('Helvetica-Bold').fontSize(4.2);
+    doc.text(`${item.label}:`, x, y, { width: colWidth - mm(1) });
+    doc.fillColor(TEXT_DARK).font('Helvetica').fontSize(4.8);
+    doc.text(item.value, x, y + mm(1.8), { width: colWidth - mm(1), align: 'left' });
   });
 
-  const signatureY = leftY + leftH - mm(9.5);
-  doc.save();
-  doc.strokeColor(BORDER_LIGHT).lineWidth(0.35).dash(1, { space: 1 });
-  doc.moveTo(centerX + mm(2), signatureY).lineTo(rightX - mm(1), signatureY).stroke();
-  doc.undash();
-  doc.restore();
-  doc.fillColor(TEXT_LIGHT).font('Helvetica').fontSize(4.6);
-  doc.text('ASSINATURA DO PORTADOR', centerX + mm(2), signatureY + mm(1.3), { width: centerW - mm(4), align: 'center' });
+
 
   const qrSize = mm(13.5);
   const qrX = rightX + (rightW - qrSize) / 2;
   const qrY = leftY + leftH - qrSize - mm(11);
   const profileUrl = `https://www.sfdgci.co.mz/membro/${encodeURIComponent(membro.numero_membro || '')}`;
-  const qrImg = await QRCode.toDataURL(profileUrl, {
+  
+  const qrData = `SINDICATO DOS FUNCIONÁRIOS DA DGCI
+---------------------------
+Nome: ${membro.nome_completo || 'N/D'}
+Nº Membro: ${membro.numero_membro || 'N/D'}
+Função: ${role}
+Serviço: ${service}
+Admissão: ${admission}
+Validade: ${validity}
+Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
+
+  const qrImg = await QRCode.toDataURL(qrData, {
     margin: 1,
     width: 180,
     color: { dark: DARK_NAVY, light: WHITE }
@@ -163,7 +172,7 @@ async function drawFront(doc, membro, logoPath) {
   doc.fillColor(WHITE).font('Helvetica-Bold').fontSize(4.4);
   doc.text('VALIDAR CARTÃO', rightX, qrY + qrSize + mm(3), { width: rightW, align: 'center' });
   doc.font('Helvetica').fontSize(3.6).fillColor(WHITE);
-  doc.text(profileUrl, rightX, qrY + qrSize + mm(6), { width: rightW, align: 'center' });
+  doc.text('sfdgci.co.mz', rightX, qrY + qrSize + mm(6), { width: rightW, align: 'center' });
 
   const mottoX = rightX + rightW - mm(1);
   const mottoY = leftY + mm(14);
@@ -204,17 +213,32 @@ async function drawBack(doc, membro, logoPath) {
   doc.fillColor(WHITE).font('Helvetica-Bold').fontSize(5.4);
   doc.text('O TITULAR DESTE CARTÃO', margin + mm(3), margin + mm(4), { width: leftW - mm(6) });
 
-  doc.fillColor(WHITE).font('Helvetica').fontSize(4.8);
+  doc.fillColor(WHITE).font('Helvetica').fontSize(4.6);
   doc.text(
     'É membro efetivo do Sindicato dos Funcionários da Direção-Geral das Contribuições e Impostos, estando em pleno gozo dos seus direitos e deveres estatutários.',
-    margin + mm(3), margin + mm(12), { width: leftW - mm(6), lineGap: 1.4 }
+    margin + mm(3), margin + mm(9), { width: leftW - mm(6), lineGap: 1.2 }
   );
 
-  const signatureY = margin + innerHeight - mm(12.5);
+  const signatureY = margin + innerHeight - mm(11);
+
+  // Assinatura estática do presidente
+  const presidenteSigPath = path.join(assetsDir, 'assinatura_presidente.png');
+  if (fs.existsSync(presidenteSigPath)) {
+    try {
+      const sigW = mm(26);
+      const sigH = mm(11);
+      const sigX = margin + (leftW - sigW) / 2;
+      doc.save();
+      doc.opacity(0.92);
+      doc.image(presidenteSigPath, sigX, signatureY - sigH + mm(1.5), { fit: [sigW, sigH], align: 'center', valign: 'center' });
+      doc.restore();
+    } catch (e) { }
+  }
+
   doc.strokeColor(WHITE).lineWidth(0.35);
   doc.moveTo(margin + mm(3), signatureY).lineTo(margin + leftW - mm(3), signatureY).stroke();
-  doc.fillColor(WHITE).font('Helvetica').fontSize(4.6);
-  doc.text('Presidente do Sindicato', margin, signatureY + mm(1.7), { width: leftW, align: 'center' });
+  doc.fillColor(WHITE).font('Helvetica').fontSize(4.4);
+  doc.text('Presidente do Sindicato', margin, signatureY + mm(1.5), { width: leftW, align: 'center' });
 
   const rightX = margin + leftW + mm(2);
   const rightW = W - rightX - margin;

@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ArrowLeft, CreditCard, Download, Printer, RefreshCw, Shield, User, Briefcase, Building2, Calendar, Layers } from 'lucide-react';
+import assinaturaPresidenteImg from '../../assets/assinatura_presidente.png';
 
 const MembroCartao = () => {
   const { id } = useParams();
@@ -37,7 +38,21 @@ const MembroCartao = () => {
 
   useEffect(() => {
     if (membro) {
-      const qrData = `https://www.sfdgci.co.mz/membro/${encodeURIComponent(membro.numero_membro)}`;
+      const dataAdmissao = new Date(membro.data_admissao);
+      const dataValidade = new Date(dataAdmissao.getFullYear() + 4, dataAdmissao.getMonth(), dataAdmissao.getDate());
+      const formattedAdmissao = `${String(dataAdmissao.getDate()).padStart(2, '0')}/${String(dataAdmissao.getMonth() + 1).padStart(2, '0')}/${dataAdmissao.getFullYear()}`;
+      const formattedValidade = `${String(dataValidade.getDate()).padStart(2, '0')}/${String(dataValidade.getMonth() + 1).padStart(2, '0')}/${dataValidade.getFullYear()}`;
+
+      const qrData = `SINDICATO DOS FUNCIONÁRIOS DA DGCI
+---------------------------
+Nome: ${membro.nome_completo || 'N/D'}
+Nº Membro: ${membro.numero_membro || 'N/D'}
+Função: ${membro.funcao_cargo || membro.cargo_nome || 'N/D'}
+Serviço: ${membro.departamento_nome || 'N/D'}
+Admissão: ${membro.data_admissao ? formattedAdmissao : 'N/D'}
+Validade: ${membro.data_admissao ? formattedValidade : 'N/D'}
+Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
+
       QRCode.toDataURL(qrData, {
         margin: 1,
         width: 150,
@@ -69,7 +84,7 @@ const MembroCartao = () => {
 
   // Calculate validity (admission date + 5 years)
   const dataAdmissao = new Date(membro.data_admissao);
-  const dataValidade = new Date(dataAdmissao.getFullYear() + 1, dataAdmissao.getMonth(), dataAdmissao.getDate());
+  const dataValidade = new Date(dataAdmissao.getFullYear() + 4, dataAdmissao.getMonth(), dataAdmissao.getDate());
   const formattedValidade = `${String(dataValidade.getDate()).padStart(2, '0')}/${String(dataValidade.getMonth() + 1).padStart(2, '0')}/${dataValidade.getFullYear()}`;
   const formattedAdmissao = `${String(dataAdmissao.getDate()).padStart(2, '0')}/${String(dataAdmissao.getMonth() + 1).padStart(2, '0')}/${dataAdmissao.getFullYear()}`;
 
@@ -97,25 +112,31 @@ const MembroCartao = () => {
     const t = toast.loading('A preparar ficheiros HD para exportação...');
     try {
       const originalFlip = isFlipped;
-      setIsFlipped(false);
 
-      // We capture front
+      const container = document.getElementById('cartao-container');
+      if (container) container.style.transform = 'scale(1)';
+      if (cardFrontRef.current) cardFrontRef.current.style.transition = 'none';
+      if (cardBackRef.current) cardBackRef.current.style.transition = 'none';
+
+      setIsFlipped(false);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       const frontCanvas = await html2canvas(cardFrontRef.current, {
-        scale: 3, // High DPI
+        scale: 4,
         useCORS: true,
-        backgroundColor: null,
       });
 
-      // We flip to back and capture
       setIsFlipped(true);
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const backCanvas = await html2canvas(cardBackRef.current, {
-        scale: 3,
+        scale: 4,
         useCORS: true,
-        backgroundColor: null,
       });
 
+      if (cardFrontRef.current) cardFrontRef.current.style.transition = '';
+      if (cardBackRef.current) cardBackRef.current.style.transition = '';
+      if (container) container.style.transform = '';
       setIsFlipped(originalFlip);
 
       const frontLink = document.createElement('a');
@@ -142,22 +163,30 @@ const MembroCartao = () => {
     try {
       const originalFlip = isFlipped;
 
+      const container = document.getElementById('cartao-container');
+      if (container) container.style.transform = 'scale(1)';
+      if (cardFrontRef.current) cardFrontRef.current.style.transition = 'none';
+      if (cardBackRef.current) cardBackRef.current.style.transition = 'none';
+
       setIsFlipped(false);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const frontCanvas = await html2canvas(cardFrontRef.current, {
-        scale: 3,
+        scale: 4,
         useCORS: true,
       });
 
       setIsFlipped(true);
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const backCanvas = await html2canvas(cardBackRef.current, {
-        scale: 3,
+        scale: 4,
         useCORS: true,
       });
 
+      if (cardFrontRef.current) cardFrontRef.current.style.transition = '';
+      if (cardBackRef.current) cardBackRef.current.style.transition = '';
+      if (container) container.style.transform = '';
       setIsFlipped(originalFlip);
 
       const pdf = new jsPDF({
@@ -254,30 +283,17 @@ const MembroCartao = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left column: Card info */}
-        <div className="lg:col-span-1 space-y-4">
-          <div className="card space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-2)' }}>
-              Cartão Institucional
-            </h3>
-            <p className="text-xs leading-5" style={{ color: 'var(--text-3)' }}>
-              Pré-visualização do cartão premium com design elegante e acabamento profissional.
-              Clique no cartão para ver a frente e o verso.
-            </p>
-            <div className="pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex gap-2 items-center text-xs" style={{ color: 'var(--text-3)' }}>
-                <Shield size={14} className="text-emerald-500" />
-                <span>Formato CR80 85.6 × 53.98 mm — impressão PVC</span>
-              </div>
-            </div>
-          </div>
+      <div className="w-full flex flex-col gap-3">
+        {/* Info strip */}
+        <div className="flex items-center gap-2 px-1" style={{ color: 'var(--text-3)' }}>
+          <Shield size={14} className="text-emerald-500 flex-shrink-0" />
+          <span className="text-xs">Formato CR80 85.6 × 53.98 mm — impressão PVC. Clique no cartão para rodar.</span>
         </div>
 
-        {/* Right column: 3D Flip Card Workspace */}
-        <div className="lg:col-span-3 flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+        {/* Full-width Card Workspace */}
+        <div className="w-full flex flex-col items-center justify-start overflow-hidden bg-slate-100 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
 
-          <div className={`cartao-preview ${isFlipped ? 'flipped' : ''}`} onClick={() => setIsFlipped(!isFlipped)}>
+          <div id="cartao-container" className={`cartao-preview ${isFlipped ? 'flipped' : ''}`} onClick={() => setIsFlipped(!isFlipped)}>
             <style>{`
               .cartao-preview * {
                 margin: 0;
@@ -288,13 +304,16 @@ const MembroCartao = () => {
               .cartao-preview {
                 position: relative;
                 min-height: 718px;
-                background: #f4f7ff;
+                background: transparent;
                 padding: 40px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 gap: 30px;
-                width: 100%;
+                width: 1091px;
+                transform: scale(0.68);
+                transform-origin: top center;
+                margin-bottom: -230px;
               }
               .cartao-preview:hover {
                 cursor: pointer;
@@ -308,7 +327,7 @@ const MembroCartao = () => {
                 top: 40px;
                 left: 50%;
                 transform: translateX(-50%);
-                background: white;
+                background: transparent;
                 box-shadow: 0 25px 80px rgba(15, 23, 42, 0.16);
                 border: 1px solid rgba(15, 23, 42, 0.08);
                 transition: transform 0.9s ease, opacity 0.9s ease;
@@ -317,6 +336,7 @@ const MembroCartao = () => {
               }
               .cartao-preview .front {
                 transform: rotateY(0deg);
+                background: linear-gradient(135deg, #f7faff 0%, #edf4ff 100%);
               }
               .cartao-preview .back {
                 transform: rotateY(180deg);
@@ -379,11 +399,11 @@ const MembroCartao = () => {
               }
               .cartao-preview .title {
                 position: absolute;
-                top: 180px;
-                left: 50%;
-                transform: translateX(-50%);
+                top: 163px;
+                left: 0;
+                right: 0;
+                width: 100%;
                 text-align: center;
-                width: calc(100% - 120px);
                 color: #0b1f4e;
               }
               .cartao-preview .title .name {
@@ -395,7 +415,7 @@ const MembroCartao = () => {
                 font-weight: 700;
               }
               .cartao-preview .title h1 {
-                font-size: 42px;
+                font-size: 28px;
                 line-height: 1.05;
                 font-weight: 900;
                 letter-spacing: 0.08em;
@@ -411,10 +431,10 @@ const MembroCartao = () => {
               }
               .cartao-preview .photo {
                 position: absolute;
-                left: 40px;
-                top: 190px;
-                width: 280px;
-                height: 360px;
+                left: 45px;
+                top: 180px;
+                width: 250px;
+                height: 320px;
                 border-radius: 28px;
                 overflow: hidden;
                 border: 5px solid #ffffff;
@@ -426,31 +446,60 @@ const MembroCartao = () => {
                 height: 100%;
                 object-fit: cover;
               }
+              .cartao-preview .member-number-front {
+                position: absolute;
+                left: 40px;
+                top: 553px;
+                width: 280px;
+                background: transparent;
+                border-radius: 0;
+                padding: 8px 16px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                border: none;
+                box-shadow: none;
+              }
+              .cartao-preview .member-number-front .mn-label {
+                color: #1f3f7e;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+              }
+              .cartao-preview .member-number-front .mn-value {
+                color: #0b1f4e;
+                font-size: 16px;
+                font-weight: 900;
+                letter-spacing: 0.12em;
+              }
               .cartao-preview .info {
                 position: absolute;
                 left: 344px;
-                top: 190px;
+                top: 192px;
                 width: 610px;
                 padding: 24px 28px 0;
                 color: #111;
                 line-height: 1.8;
-                background: rgba(255,255,255,0.96);
+                background: transparent;
                 border-radius: 28px;
-                border: 1px solid rgba(15, 23, 42, 0.08);
-                box-shadow: 0 22px 60px rgba(15, 23, 42, 0.08);
+                border: none;
+                box-shadow: none;
               }
               .cartao-preview .info-grid {
                 display: grid;
                 grid-template-columns: 160px 1fr;
                 gap: 16px 24px;
-                align-items: center;
+                align-items: baseline;
               }
               .cartao-preview .info-row {
                 display: contents;
               }
               .cartao-preview .label {
                 color: #21447c;
-                font-size: 12px;
+                font-size: 16px;
                 font-weight: 700;
                 letter-spacing: 0.12em;
                 text-transform: uppercase;
@@ -458,26 +507,26 @@ const MembroCartao = () => {
               .cartao-preview .value {
                 color: #0f1f4e;
                 font-size: 24px;
-                font-weight: 800;
+                font-weight: 400;
                 line-height: 1.2;
               }
               .cartao-preview .signatures {
                 position: absolute;
                 left: 344px;
-                bottom: 42px;
+                bottom: 18px;
                 width: 610px;
                 padding: 24px 30px;
                 border-radius: 24px;
-                background: rgba(11, 31, 78, 0.06);
-                border: 1px solid rgba(15, 23, 42, 0.08);
+                background: transparent;
+                border: none;
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                justify-content: center;
               }
               .cartao-preview .signature {
                 display: flex;
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
                 gap: 12px;
               }
               .cartao-preview .signature .line {
@@ -491,6 +540,7 @@ const MembroCartao = () => {
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.08em;
+                text-align: center;
               }
               .cartao-preview .back {
                 background: linear-gradient(135deg, #f7faff 0%, #e7efff 100%);
@@ -571,6 +621,10 @@ const MembroCartao = () => {
               }
               .cartao-preview .back-content .signature {
                 margin-top: 24px;
+                align-items: flex-start;
+                text-align: left;
+                margin-left: auto;
+                width: auto;
               }
               .cartao-preview .qr {
                 position: absolute;
@@ -636,6 +690,7 @@ const MembroCartao = () => {
               <div className="photo">
                 <img src={membro.foto_url || logoImg} alt="Membro" />
               </div>
+
               <div className="info">
                 <div className="info-grid">
                   <div className="label">Nome</div>
@@ -652,12 +707,14 @@ const MembroCartao = () => {
                   <div className="value">{formattedValidade}</div>
                 </div>
               </div>
-              <div className="signatures">
-                <div className="signature">
-                  <div className="line" />
-                  <span className="name">Assinatura do Titular</span>
+
+              <div className="footer" style={{ justifyContent: 'flex-start' }}>
+                <div style={{ maxWidth: '100%', whiteSpace: 'nowrap', display: 'flex', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 14, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', fontWeight: 600, marginRight: 12 }}>Nº de Membro:</span>
+                  <span style={{ fontSize: 24, fontWeight: 900, letterSpacing: '0.1em', color: '#ffffff' }}>{membro.numero_membro}</span>
                 </div>
               </div>
+
             </div>
 
             <div className="card back" ref={cardBackRef}>
@@ -665,32 +722,60 @@ const MembroCartao = () => {
                 <img src={logoImg} alt="Logo" />
                 <div className="header-text">
                   <p>SF-DGCI</p>
-                  <h2>Direção-Geral das Contribuições e Impostos</h2>
-                </div>
-                <div className="member-number">
-                  Nº de Membro
-                  <strong>{membro.numero_membro}</strong>
+                  <h2>SINDICATO DOS FUNCIONÁRIOS - DGCI</h2>
                 </div>
               </div>
               <img className="back-watermark" src={logoImg} alt="Watermark" />
-              <div className="back-content">
+              <div className="back-content" style={{ paddingTop: 10, top: 130 }}>
                 <h3>ESTE CARTÃO É PESSOAL E INTRANSMISSÍVEL</h3>
                 <p>
                   Confere ao titular o direito de usufruir de todos os benefícios e serviços disponibilizados pelo Sindicato dos Funcionários da DGCI, nos termos dos Estatutos e Regulamentos em vigor.
                 </p>
-                <div className="signature" style={{ marginTop: '40px' }}>
-                  <div className="line" />
-                  <span className="name">Assinatura do Presidente</span>
+              </div>
+              {/* Assinatura do Presidente — posicionada acima do rodapé */}
+              <div style={{
+                position: 'absolute',
+                bottom: 115,
+                left: 'auto',
+                right: 350,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+              }}>
+                <div style={{ height: 85, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                  <img
+                    src={assinaturaPresidenteImg}
+                    alt="Assinatura do Presidente"
+                    style={{
+                      maxHeight: 110,
+                      maxWidth: 360,
+                      objectFit: 'contain',
+                      display: 'block',
+                      background: 'transparent',
+                      marginBottom: -20
+                    }}
+                  />
                 </div>
+                <div style={{ width: 220, height: 2, background: 'rgba(15,23,42,0.24)' }} />
+                <span style={{
+                  fontSize: 13,
+                  color: '#0b1f4e',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  textAlign: 'center'
+                }}>Assinatura do Presidente</span>
               </div>
               <div className="qr">
                 {qrCodeUrl ? <img src={qrCodeUrl} alt="QR Code" /> : <div style={{ width: '100%', height: '100%', background: '#f5f5f5' }} />}
               </div>
               <div className="footer">
-                <div>Avenida da China, Edifício DGCI, CP 509, Maputo - Moçambique</div>
-                <div>+258 21 365 700</div>
-                <div>geral@sfdgci.co.mz</div>
-                <div>www.sfdgci.co.mz</div>
+                <div>Av. João Bernardo Vieira, Edifício da DGCI, Bissau - Guiné-Bissau</div>
+                <div className="separator" />
+                <div>955 371 498</div>
+                <div className="separator" />
+                <div>sf-dgci@dgci.mef.gw</div>
               </div>
             </div>
           </div>
