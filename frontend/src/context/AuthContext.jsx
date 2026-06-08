@@ -3,61 +3,54 @@ import api from '../services/api';
 
 const AuthContext = createContext();
 
-const getStoredToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
-const clearStoredToken = () => {
-  localStorage.removeItem('token');
-  sessionStorage.removeItem('token');
-};
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = getStoredToken();
-      if (token) {
-        try {
-          const { data } = await api.get('/auth/me');
-          if (data.success) {
-            setUser(data.data);
-          }
-        } catch (error) {
-          clearStoredToken();
-          setUser(null);
+      try {
+        // ✅ Token é enviado automaticamente via httpOnly cookie
+        const { data } = await api.get('/auth/me');
+        if (data.success) {
+          setUser(data.data);
         }
+      } catch (error) {
+        // Não autenticado - token expirado ou inválido
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     checkAuth();
   }, []);
 
-  const login = async (email, password, remember = false) => {
-    const { data } = await api.post('/auth/login', { email, password });
-    if (data.success) {
-      if (remember) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('rememberMe', 'true');
-        localStorage.setItem('rememberedEmail', email);
-        sessionStorage.removeItem('token');
-      } else {
-        sessionStorage.setItem('token', data.token);
-        localStorage.removeItem('rememberMe');
-        localStorage.removeItem('rememberedEmail');
-        localStorage.removeItem('token');
+  const login = async (email, password) => {
+    try {
+      const { data } = await api.post('/auth/login', { email, password });
+      if (data.success) {
+        // ✅ Token é enviado automaticamente via httpOnly cookie pelo servidor
+        // Não armazenamos nada em localStorage
+        setUser(data.user);
+        return true;
       }
-      setUser(data.user);
-      return true;
+      return false;
+    } catch (error) {
+      console.error('Erro no login:', error);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
-    clearStoredToken();
-    localStorage.removeItem('rememberMe');
-    localStorage.removeItem('rememberedEmail');
-    setUser(null);
-    window.location.href = '/login';
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    } finally {
+      // ✅ Cookie httpOnly é automaticamente limpo pelo servidor
+      setUser(null);
+      window.location.href = '/';
+    }
   };
 
   const hasPermission = (permission) => {
@@ -67,11 +60,13 @@ export const AuthProvider = ({ children }) => {
 
     // Simplificando permissões no frontend (verificação real no backend)
     const roleMap = {
-      presidente: ['read', 'create', 'update', 'delete'],
+      // Presidente e auditor: apenas consulta — sem criação, edição ou eliminação
+      presidente: ['read'],
+      auditor: ['read'],
+      // Restantes perfis com as suas permissões operacionais
       tesoureiro: ['financeiro', 'quotas', 'read'],
-      secretario: ['membros', 'documentos', 'read'],
+      secretario: ['membros', 'documentos', 'comunicados', 'read'],
       operador: ['read'],
-      auditor: ['read']
     };
 
     const perms = roleMap[user.perfil] || [];
@@ -80,7 +75,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading, hasPermission }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

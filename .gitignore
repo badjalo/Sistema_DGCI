@@ -12,10 +12,13 @@ build/
 .env
 .env.local
 .env.production
+.env.*.local
 
 # Logs
 *.log
 npm-debug.log*
+backend/logs/
+backend/logs/*.log
 
 # OS files
 .DS_Store
@@ -29,9 +32,19 @@ Thumbs.db
 backend/uploads/fotos/*
 backend/uploads/recibos/*
 backend/uploads/documentos/*
+backend/uploads/assinaturas/*
 !backend/uploads/fotos/.gitkeep
 !backend/uploads/recibos/.gitkeep
 !backend/uploads/documentos/.gitkeep
+!backend/uploads/assinaturas/.gitkeep
 
 # Temp files
 backend/tmp_*.pdf
+test_table.pdf
+
+# Security sensitive
+*.key
+*.pem
+*.p8
+*.p12
+*.pfx

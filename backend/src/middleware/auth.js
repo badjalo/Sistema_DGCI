@@ -6,12 +6,18 @@ const { query } = require('../config/database');
  */
 const authenticate = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // ✅ Ler token de httpOnly cookie (mais seguro que localStorage)
+    let token = req.cookies?.authToken;
+
+    // Fallback para Authorization header (compatibilidade com mobile)
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
       return res.status(401).json({ error: 'Token de autenticação não fornecido' });
     }
 
-    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Buscar utilizador atualizado da base de dados
@@ -40,14 +46,23 @@ const authenticate = async (req, res, next) => {
 /**
  * Middleware opcional de autenticação (não falha se não houver token)
  */
+/**
+ * Middleware opcional de autenticação (não falha se não houver token)
+ */
 const optionalAuth = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // ✅ Ler token de httpOnly cookie
+    let token = req.cookies?.authToken;
+
+    if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
       req.user = null;
       return next();
     }
-    const token = authHeader.split(' ')[1];
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const result = await query(
       'SELECT id, nome, email, perfil, ativo FROM utilizadores WHERE id = $1',

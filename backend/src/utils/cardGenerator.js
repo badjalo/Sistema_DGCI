@@ -73,13 +73,21 @@ async function drawFront(doc, membro, logoPath) {
 
   if (membro.foto_url) {
     try {
-      const photoPath = path.join(__dirname, '../../', membro.foto_url.replace(/^\//, ''));
+      let fotoPathValue = membro.foto_url.replace(/^\//, '');
+      // Remover query string (cache buster)
+      fotoPathValue = fotoPathValue.split('?')[0];
+      if (fotoPathValue.startsWith('public/')) {
+        fotoPathValue = fotoPathValue.replace(/^public\//, '');
+      }
+      const photoPath = path.join(__dirname, '../../', fotoPathValue);
       if (fs.existsSync(photoPath)) {
         doc.image(photoPath, photoX + 0.8, photoY + 0.8, {
           fit: [photoW - 1.6, photoH - 1.6], align: 'center', valign: 'center'
         });
       }
-    } catch (e) { }
+    } catch (e) {
+      console.error('Erro ao processar foto do cartão:', e.message);
+    }
   } else {
     doc.fillColor(DARK_NAVY).font('Helvetica-Bold').fontSize(24);
     doc.text((membro.nome_completo || 'M').charAt(0), photoX + photoW / 2 - 8.5, photoY + photoH / 2 - 12);
@@ -119,7 +127,12 @@ async function drawFront(doc, membro, logoPath) {
   const role = membro.funcao_cargo || membro.cargo_nome || '—';
   const service = membro.departamento_nome || '—';
   const admission = membro.data_admissao ? new Date(membro.data_admissao).toLocaleDateString('pt-PT') : '-';
-  const validity = membro.data_admissao ? new Date(new Date(membro.data_admissao).setFullYear(new Date(membro.data_admissao).getFullYear() + 4)).toLocaleDateString('pt-PT') : '-';
+  let validity = '-';
+  if (membro.data_validade) {
+    validity = new Date(membro.data_validade).toLocaleDateString('pt-PT');
+  } else if (membro.data_admissao) {
+    validity = new Date(new Date(membro.data_admissao).setFullYear(new Date(membro.data_admissao).getFullYear() + 4)).toLocaleDateString('pt-PT');
+  }
 
   const details = [
     { label: 'Nome', value: membro.nome_completo || '-' },
@@ -136,7 +149,7 @@ async function drawFront(doc, membro, logoPath) {
     const row = Math.floor(idx / 2);
     const x = centerX + mm(2) + col * colWidth;
     const y = infoStartY + row * infoGap;
-    
+
     doc.fillColor(TEXT_LABEL).font('Helvetica-Bold').fontSize(4.2);
     doc.text(`${item.label}:`, x, y, { width: colWidth - mm(1) });
     doc.fillColor(TEXT_DARK).font('Helvetica').fontSize(4.8);
@@ -149,7 +162,7 @@ async function drawFront(doc, membro, logoPath) {
   const qrX = rightX + (rightW - qrSize) / 2;
   const qrY = leftY + leftH - qrSize - mm(11);
   const profileUrl = `https://www.sfdgci.co.mz/membro/${encodeURIComponent(membro.numero_membro || '')}`;
-  
+
   const qrData = `SINDICATO DOS FUNCIONÁRIOS DA DGCI
 ---------------------------
 Nome: ${membro.nome_completo || 'N/D'}
@@ -187,7 +200,7 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
   doc.restore();
 }
 
-async function drawBack(doc, membro, logoPath) {
+async function drawBack(doc, membro, logoPath, configs = {}) {
   doc.addPage({ size: [W, H], margin: 0 });
 
   doc.rect(0, 0, W, H).fill(BG_LIGHT);
@@ -266,11 +279,13 @@ async function drawBack(doc, membro, logoPath) {
 
   const contactY = margin + mm(52);
   const contactItems = [
-    { label: 'Sede', value: 'Av. Combatentes da Liberdade da Pátria, Nº 1998, CP 1449, Bissau – Guiné-Bissau' },
-    { label: 'Telefone', value: '+245 95 123 45 67' },
-    { label: 'Email', value: 'sindicatodgci@gmail.com' },
-    { label: 'Website', value: 'www.sindicatodgci.gw' }
+    { label: 'Sede', value: configs.sede || 'Av. João Bernardo Vieira, Edificio da DGCI, Bissau - Guiné-Bissau' },
+    { label: 'Telefone', value: configs.telefone || '+245 955 371 498' },
+    { label: 'Email', value: configs.email || 'sf-dgci@dgci.mef.gw' }
   ];
+  if (configs.website) {
+    contactItems.push({ label: 'Website', value: configs.website });
+  }
 
   let currentY = contactY;
   contactItems.forEach((item) => {
@@ -284,13 +299,22 @@ async function drawBack(doc, membro, logoPath) {
 }
 
 async function generateCard(membro, res) {
+  const { query } = require('../config/database');
+  let configs = {};
+  try {
+    const result = await query('SELECT chave, valor FROM configuracoes');
+    result.rows.forEach(r => { configs[r.chave] = r.valor; });
+  } catch (err) {
+    console.error('Erro ao buscar configuracoes para o cartao:', err);
+  }
+
   const doc = new PDFDocument({ size: [W, H], margin: 0 });
   doc.pipe(res);
 
   const logoPath = getLogoPath();
 
   await drawFront(doc, membro, logoPath);
-  await drawBack(doc, membro, logoPath);
+  await drawBack(doc, membro, logoPath, configs);
 
   doc.end();
 }

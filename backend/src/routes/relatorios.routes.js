@@ -161,8 +161,8 @@ router.get('/export', authenticate, authorize('relatorios:read'), async (req, re
       .text('SINDICATO DOS FUNCIONÁRIOS DA DGCI', 100, 40)
       .fontSize(10)
       .font('Helvetica')
-      .text('Av. Combatentes da Liberdade da Pátria, Bissau', 100, 58)
-      .text('Email: sindicatodgci@gmail.com', 100, 72);
+      .text('Av. João Bernardo Vieira, Edificio da DGCI, Bissau', 100, 58)
+      .text('Email: sf-dgci@dgci.mef.gw', 100, 72);
 
     doc.moveDown(3);
 

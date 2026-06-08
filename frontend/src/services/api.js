@@ -5,27 +5,31 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // ✅ Enviar cookies automaticamente (httpOnly)
+  withCredentials: true
 });
 
-const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+// ✅ Interceptor para remover Content-Type quando FormData é enviado
+api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    // Deixar o navegador definir automaticamente multipart/form-data
+    delete config.headers['Content-Type'];
+  }
+  return config;
+});
 
-api.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// ✅ Remover tentativa de ler token de localStorage
+// Token é agora um httpOnly cookie enviado automaticamente
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
+    const url = error.config?.url || '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/me');
+
+    // Only force-redirect on 401 for non-auth endpoints
+    // (avoids redirect loop when login itself returns 401)
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -33,3 +37,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

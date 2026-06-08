@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { normalizeMembersList } = require('../utils/uploadUrl');
 
 /** GET /api/dashboard/resumo */
 const resumo = async (req, res, next) => {
@@ -144,7 +145,7 @@ const resumo = async (req, res, next) => {
         membros: membros.rows[0],
         quotas: quotas.rows[0],
         financeiro: financeiro.rows[0],
-        membros_recentes: recentes.rows,
+        membros_recentes: normalizeMembersList(recentes.rows),
         fluxo_mensal: fluxoMensal.rows,
         quotas_mensal: quotasMensal.rows
       }

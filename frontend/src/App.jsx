@@ -2,10 +2,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 import Layout from './components/Layout';
 
 // Pages
 import Login from './pages/Login';
+import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import MembrosList from './pages/Membros/MembrosList';
 import MembroForm from './pages/Membros/MembroForm';
@@ -41,41 +43,48 @@ function App() {
             },
             success: {
               iconTheme: { primary: '#10b981', secondary: '#fff' },
-              style: {
-                borderLeft: '4px solid #10b981',
-              },
+              style: { borderLeft: '4px solid #10b981' },
             },
             error: {
               iconTheme: { primary: '#ef4444', secondary: '#fff' },
-              style: {
-                borderLeft: '4px solid #ef4444',
-              },
+              style: { borderLeft: '4px solid #ef4444' },
             },
           }}
         />
         <Routes>
+          {/* Public: landing page (redirects to /dashboard if already logged in) */}
+          <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+
+          {/* Public: login */}
           <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard"    element={<Dashboard />} />
+          {/*
+            Protected area:
+            ProtectedRoute (Outlet) → Layout (Outlet) → page
+            Sidebar uses absolute paths like /dashboard, /membros — preserved exactly.
+          */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/dashboard"          element={<Dashboard />} />
 
-            <Route path="membros"              element={<MembrosList />} />
-            <Route path="membros/novo"         element={<MembroForm />} />
-            <Route path="membros/:id"          element={<MembroDetalhe />} />
-            <Route path="membros/:id/editar"   element={<MembroEditar />} />
-            <Route path="membros/:id/cartao"   element={<MembroCartao />} />
+              <Route path="/membros"            element={<MembrosList />} />
+              <Route path="/membros/novo"       element={<MembroForm />} />
+              <Route path="/membros/:id"        element={<MembroDetalhe />} />
+              <Route path="/membros/:id/editar" element={<MembroEditar />} />
+              <Route path="/membros/:id/cartao" element={<MembroCartao />} />
 
-            <Route path="quotas"        element={<Quotas />} />
-            <Route path="financeiro"    element={<Financeiro />} />
-            <Route path="documentos"    element={<Documentos />} />
-            <Route path="comunicados"   element={<Comunicados />} />
-            <Route path="relatorios"    element={<Relatorios />} />
-            <Route path="departamentos" element={<Departamentos />} />
-            <Route path="configuracoes" element={<Configuracoes />} />
+              <Route path="/quotas"        element={<Quotas />} />
+              <Route path="/financeiro"    element={<Financeiro />} />
+              <Route path="/documentos"    element={<Documentos />} />
+              <Route path="/comunicados"   element={<Comunicados />} />
+              <Route path="/relatorios"    element={<Relatorios />} />
+              <Route path="/departamentos" element={<Departamentos />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
+            </Route>
           </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

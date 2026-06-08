@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { normalizeMemberData, normalizeMembersList } = require('../utils/uploadUrl');
 
 
 const gerarNumeroMembro = async () => {
@@ -103,7 +104,7 @@ const listar = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: result.rows,
+      data: normalizeMembersList(result.rows),
       pagination: {
         total,
         page: parseInt(page),
@@ -134,7 +135,7 @@ const obter = async (req, res, next) => {
     if (!result.rows.length) {
       return res.status(404).json({ error: 'Membro não encontrado' });
     }
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: normalizeMemberData(result.rows[0]) });
   } catch (err) {
     next(err);
   }
@@ -252,10 +253,26 @@ const atualizar = async (req, res, next) => {
 
     const estado_civil = normalizeEstadoCivil(raw_estado_civil);
 
+    // Debug: Rastrear upload de foto
+    console.log('[ATUALIZAR] req.files disponível:', !!req.files);
+    if (req.files) {
+      console.log('[ATUALIZAR] Campos de files:', Object.keys(req.files));
+      if (req.files.foto) {
+        console.log('[ATUALIZAR] req.files.foto[0]:', {
+          originalname: req.files.foto[0].originalname,
+          filename: req.files.foto[0].filename,
+          path: req.files.foto[0].path
+        });
+      }
+    }
+
     const fotoFile = req.files && req.files['foto'] && req.files['foto'][0];
     const assinaturaFile = req.files && req.files['assinatura'] && req.files['assinatura'][0];
     const foto_url = fotoFile ? `/uploads/fotos/${fotoFile.filename}` : undefined;
     const assinatura_url = assinaturaFile ? `/uploads/assinaturas/${assinaturaFile.filename}` : undefined;
+
+    console.log('[ATUALIZAR] foto_url:', foto_url);
+    console.log('[ATUALIZAR] assinatura_url:', assinatura_url);
 
     const existing = await query('SELECT departamento_id, estado FROM membros WHERE id = $1', [req.params.id]);
     if (!existing.rows.length) {
@@ -320,7 +337,7 @@ const atualizar = async (req, res, next) => {
       params
     );
 
-    res.json({ success: true, data: result.rows[0], message: 'Membro atualizado com sucesso' });
+    res.json({ success: true, data: normalizeMemberData(result.rows[0]), message: 'Membro atualizado com sucesso' });
   } catch (err) {
     if (err.code === '23505') {
       const detail = err.detail || '';
@@ -402,6 +419,13 @@ const obterCartao = async (req, res, next) => {
     }
 
     const membro = result.rows[0];
+    const cardResult = await query(
+      `SELECT data_validade FROM cartoes WHERE membro_id = $1 AND estado = true ORDER BY criado_em DESC LIMIT 1`,
+      [req.params.id]
+    );
+    if (cardResult.rows.length) {
+      membro.data_validade = cardResult.rows[0].data_validade;
+    }
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="cartao_${membro.numero_membro}.pdf"`);

@@ -1,11 +1,19 @@
 const { Pool } = require('pg');
 
+// ✅ SEGURANÇA: Validar que DB_PASSWORD está definida (não usar fallback!)
+if (!process.env.DB_PASSWORD) {
+  throw new Error(
+    '🔴 CRÍTICO: DB_PASSWORD não configurada em .env\n' +
+    'Defina uma password forte em seu ficheiro .env'
+  );
+}
+
 const pool = new Pool({
-  host:     process.env.DB_HOST     || 'localhost',
-  port:     parseInt(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME     || 'sf_dgci',
-  user:     process.env.DB_USER     || 'postgres',
-  password: process.env.DB_PASSWORD || 'sf_dgci_2026',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT) || 5432,
+  database: process.env.DB_NAME || 'sf_dgci',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD,  // ✅ Sem fallback - obrigado definir em produção
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

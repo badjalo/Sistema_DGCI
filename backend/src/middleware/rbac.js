@@ -6,17 +6,17 @@
 const PERMISSIONS = {
   administrador: ['*'], // Acesso total
   presidente: [
-    'membros:read', 'membros:create', 'membros:update',
-    'quotas:read', 'quotas:create', 'quotas:update',
-    'pagamentos:read', 'pagamentos:create',
-    'financeiro:read', 'financeiro:create',
-    'documentos:read', 'documentos:create', 'documentos:update', 'documentos:delete',
-    'comunicados:read', 'comunicados:create', 'comunicados:update', 'comunicados:delete',
+    'membros:read',
+    'quotas:read',
+    'pagamentos:read',
+    'financeiro:read',
+    'documentos:read',
+    'comunicados:read',
     'relatorios:read',
     'departamentos:read',
-    'cartoes:read', 'cartoes:create',
+    'cartoes:read',
     'utilizadores:read',
-    'configuracoes:read', 'configuracoes:update',
+    'configuracoes:read',
     'dashboard:read',
     'auditoria:read'
   ],

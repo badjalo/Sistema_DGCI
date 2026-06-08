@@ -39,7 +39,9 @@ const MembroCartao = () => {
   useEffect(() => {
     if (membro) {
       const dataAdmissao = new Date(membro.data_admissao);
-      const dataValidade = new Date(dataAdmissao.getFullYear() + 4, dataAdmissao.getMonth(), dataAdmissao.getDate());
+      const dataValidade = membro.data_validade
+        ? new Date(membro.data_validade)
+        : new Date(dataAdmissao.getFullYear() + 4, dataAdmissao.getMonth(), dataAdmissao.getDate());
       const formattedAdmissao = `${String(dataAdmissao.getDate()).padStart(2, '0')}/${String(dataAdmissao.getMonth() + 1).padStart(2, '0')}/${dataAdmissao.getFullYear()}`;
       const formattedValidade = `${String(dataValidade.getDate()).padStart(2, '0')}/${String(dataValidade.getMonth() + 1).padStart(2, '0')}/${dataValidade.getFullYear()}`;
 
@@ -84,7 +86,9 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
 
   // Calculate validity (admission date + 5 years)
   const dataAdmissao = new Date(membro.data_admissao);
-  const dataValidade = new Date(dataAdmissao.getFullYear() + 4, dataAdmissao.getMonth(), dataAdmissao.getDate());
+  const dataValidade = membro.data_validade
+    ? new Date(membro.data_validade)
+    : new Date(dataAdmissao.getFullYear() + 4, dataAdmissao.getMonth(), dataAdmissao.getDate());
   const formattedValidade = `${String(dataValidade.getDate()).padStart(2, '0')}/${String(dataValidade.getMonth() + 1).padStart(2, '0')}/${dataValidade.getFullYear()}`;
   const formattedAdmissao = `${String(dataAdmissao.getDate()).padStart(2, '0')}/${String(dataAdmissao.getMonth() + 1).padStart(2, '0')}/${dataAdmissao.getFullYear()}`;
 
@@ -480,9 +484,9 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
                 left: 344px;
                 top: 192px;
                 width: 610px;
-                padding: 24px 28px 0;
+                padding: 18px 20px 0;
                 color: #111;
-                line-height: 1.8;
+                line-height: 1.7;
                 background: transparent;
                 border-radius: 28px;
                 border: none;
@@ -491,7 +495,7 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
               .cartao-preview .info-grid {
                 display: grid;
                 grid-template-columns: 160px 1fr;
-                gap: 16px 24px;
+                gap: 10px 16px;
                 align-items: baseline;
               }
               .cartao-preview .info-row {

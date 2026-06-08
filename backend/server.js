@@ -6,12 +6,44 @@ const compression = require('compression');
 const morgan = require('morgan');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
+const winston = require('winston');
+const { protectSensitiveData } = require('./src/middleware/protect-pii');
+const { auditMiddleware } = require('./src/middleware/audit-complete');
+const { secureDownload, servePublicUpload } = require('./src/middleware/downloads');
+require('express-async-errors');  // ✅ Catch async errors
 
 const app = express();
+
+// ✅ Logger de Erros (Winston)
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'error',
+  format: winston.format.json(),
+  defaultMeta: { service: 'sf-dgci-backend' },
+  transports: [
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' })
+  ]
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }));
+}
 
 // Garantir que a pasta de uploads existe
 const fs = require('fs');
 const uploadsDir = path.join(__dirname, 'uploads');
+
+// Criar pasta logs se não existir
+const logsDir = path.join(__dirname, 'logs');
+try {
+  if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+} catch (err) {
+  console.error('Erro ao criar diretório de logs:', err);
+}
 const fotosDir = path.join(uploadsDir, 'fotos');
 const assetsDir = path.join(uploadsDir, 'assets');
 const documentosDir = path.join(uploadsDir, 'documentos');
@@ -39,34 +71,53 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// ── Body Parsers ───────────────────────────────────────────── (ANTES dos rate limiters!)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());  // ✅ Parse cookies para httpOnly tokens
+app.use(compression());
+
 // ── Rate Limiting ────────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: process.env.NODE_ENV === 'development' ? 1000 : 300,
   message: { error: 'Demasiadas requisições. Tente novamente em breve.' }
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: process.env.NODE_ENV === 'development' ? 20 : 5,
+  keyGenerator: (req) => req.body.email || req.ip,  // Por email/IP
   message: { error: 'Demasiadas tentativas de login. Tente novamente em 15 minutos.' }
 });
 
 app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiter);
 
-// ── Body Parsers ─────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(compression());
+// ✅ CSRF Protection (exceto GET, HEAD, OPTIONS)
+const csrfProtection = csrf({
+  cookie: false,  // Usar em session, não em cookie
+  sessionKey: 'csrfToken'
+});
 
 // ── Logging ──────────────────────────────────────────────────
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// ── Static Files ─────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ✅ Middleware de Proteção de PII (remover dados sensíveis de respostas)
+app.use('/api/', protectSensitiveData);
+
+// ✅ Middleware de Auditoria Completa (registar TODAS as ações)
+app.use('/api/', auditMiddleware);
+
+// ── Serviço Seguro de Uploads ─────────────────────────────────
+// Remover a rota pública de uploads
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));  // ❌ REMOVIDO (inseguro)
+
+// Servir apenas imagens publicamente com proteção
+app.get('/public/uploads/:subdir/:filename', servePublicUpload(path.join(__dirname, 'uploads')));
+app.get('/uploads/:subdir/:filename', servePublicUpload(path.join(__dirname, 'uploads')));  // compatibilidade com URLs antigas
 
 // ── Routes ───────────────────────────────────────────────────
 app.use('/api/auth', require('./src/routes/auth.routes'));
@@ -86,6 +137,11 @@ app.use('/api/dashboard', require('./src/routes/dashboard.routes'));
 app.use('/api/configuracoes', require('./src/routes/configuracoes.routes'));
 app.use('/api/auditoria', require('./src/routes/auditoria.routes'));
 
+// ── Endpoint de Download Seguro ──────────────────────────────
+const { authenticate } = require('./src/middleware/auth');
+app.get('/api/download/:fileId', authenticate, secureDownload(path.join(__dirname, 'uploads')));
+app.get('/api/download/nome/:filename', authenticate, secureDownload(path.join(__dirname, 'uploads')));
+
 // ── Health Check ─────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
@@ -103,7 +159,22 @@ app.use((req, res) => {
 
 // ── Error Handler ────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  // ✅ Logging com Winston
+  logger.error({
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    user: req.user?.id || 'anonymous',
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  });
+
+  // ✅ CSRF token error
+  if (err.code === 'EBADCSRFTOKEN') {
+    return res.status(403).json({ error: 'Token CSRF inválido ou ausente' });
+  }
+
   res.status(err.status || 500).json({
     error: err.message || 'Erro interno do servidor',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })

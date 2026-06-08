@@ -32,13 +32,15 @@ const Login = () => {
 
     setIsSubmitting(true);
     try {
-      const success = await login(email, password, rememberMe);
+      const success = await login(email, password);
       if (success) {
         toast.success('Login efetuado com sucesso!');
         navigate('/dashboard');
+      } else {
+        toast.error('Credenciais inválidas. Verifique o email e a palavra-passe.');
       }
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Credenciais inválidas');
+      toast.error(error.response?.data?.error || 'Erro ao tentar autenticar.');
     } finally {
       setIsSubmitting(false);
     }

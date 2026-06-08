@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../config/database');
+const { sanitizeEmail, sanitizeString } = require('../utils/sanitize');
+const { normalizeUploadUrl } = require('../utils/uploadUrl');
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -14,7 +16,10 @@ const generateToken = (user) => {
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
+
+    // ✅ Validação e sanitização (expressValidator já fez isso nas rotas)
+    const cleanEmail = sanitizeEmail(email);
+    if (!cleanEmail || !password) {
       return res.status(400).json({ error: 'Email e password são obrigatórios' });
     }
 
@@ -23,10 +28,17 @@ const login = async (req, res, next) => {
        FROM utilizadores u
        LEFT JOIN membros m ON m.id = u.membro_id
        WHERE u.email = $1`,
-      [email.toLowerCase().trim()]
+      [cleanEmail]
     );
 
     if (!result.rows.length) {
+      // ✅ Log de tentativa falhada (auditoria)
+      await query(
+        `INSERT INTO auditoria_logs (utilizador_nome, acao, entidade, status_code, ip_address, detalhes)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['anonymous', 'LOGIN_FALHOU', 'auth', 401, req.ip, JSON.stringify({ email: cleanEmail })]
+      ).catch(() => { });  // Ignorar erro na auditoria
+
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
@@ -37,6 +49,13 @@ const login = async (req, res, next) => {
 
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
+      // ✅ Log de tentativa falhada
+      await query(
+        `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade, status_code, ip_address)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [user.id, user.nome, 'LOGIN_FALHOU', 'auth', 401, req.ip]
+      ).catch(() => { });
+
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
@@ -45,23 +64,31 @@ const login = async (req, res, next) => {
 
     const token = generateToken(user);
 
-    // Log de auditoria
+    // ✅ Log de auditoria de sucesso
     await query(
-      `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade, ip_address)
-       VALUES ($1, $2, 'LOGIN', 'utilizadores', $3)`,
-      [user.id, user.nome, req.ip]
-    );
+      `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade, ip_address, status_code)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [user.id, user.nome, 'LOGIN_SUCESSO', 'auth', req.ip, 200]
+    ).catch(() => { });
+
+    // ✅ SEGURANÇA: Enviar token em httpOnly cookie (protege contra XSS)
+    res.cookie('authToken', token, {
+      httpOnly: true,      // Não acessível via JavaScript
+      secure: process.env.NODE_ENV === 'production',  // HTTPS only em produção
+      sameSite: 'Strict',  // Protege contra CSRF
+      maxAge: 24 * 60 * 60 * 1000,  // 24 horas
+      path: '/'
+    });
 
     res.json({
       success: true,
-      token,
       user: {
         id: user.id,
-        nome: user.nome,
-        email: user.email,
+        nome: sanitizeString(user.nome),
+        email: cleanEmail,
         perfil: user.perfil,
-        avatar_url: user.avatar_url,
-        membro_foto: user.membro_foto,
+        avatar_url: normalizeUploadUrl(user.avatar_url),
+        membro_foto: normalizeUploadUrl(user.membro_foto),
         preferencias: user.preferencias
       }
     });
@@ -78,6 +105,10 @@ const logout = async (req, res, next) => {
        VALUES ($1, $2, 'LOGOUT', 'utilizadores')`,
       [req.user.id, req.user.nome]
     );
+
+    // ✅ Limpar cookie httpOnly
+    res.clearCookie('authToken', { path: '/' });
+
     res.json({ success: true, message: 'Sessão terminada com sucesso' });
   } catch (err) {
     next(err);
@@ -97,7 +128,12 @@ const me = async (req, res, next) => {
        WHERE u.id = $1`,
       [req.user.id]
     );
-    res.json({ success: true, data: result.rows[0] });
+    const data = result.rows[0] ? { ...result.rows[0] } : null;
+    if (data) {
+      data.avatar_url = normalizeUploadUrl(data.avatar_url);
+      data.membro_foto = normalizeUploadUrl(data.membro_foto);
+    }
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }
