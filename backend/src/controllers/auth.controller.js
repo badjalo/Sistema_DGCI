@@ -71,15 +71,17 @@ const login = async (req, res, next) => {
       [user.id, user.nome, 'LOGIN_SUCESSO', 'auth', req.ip, 200]
     ).catch(() => { });
 
-    const cookieSameSite = process.env.COOKIE_SAMESITE || 'Strict';
-    const isSameSiteNone = cookieSameSite.toLowerCase() === 'none';
-    const cookieSecure = isSameSiteNone || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
+    // ✅ Em produção, frontend e backend estão em domínios diferentes (cross-domain)
+    // É obrigatório usar SameSite=None + Secure=true para o cookie funcionar
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSecure = isProduction;
+    const cookieSameSite = isProduction ? 'none' : 'lax';
 
     // ✅ SEGURANÇA: Enviar token em httpOnly cookie (protege contra XSS)
     res.cookie('authToken', token, {
-      httpOnly: true,      // Não acessível via JavaScript
-      secure: cookieSecure,  // HTTPS only
-      sameSite: isSameSiteNone ? 'none' : cookieSameSite,
+      httpOnly: true,        // Não acessível via JavaScript
+      secure: cookieSecure,  // HTTPS only em produção
+      sameSite: cookieSameSite, // 'none' em produção (cross-domain)
       maxAge: 24 * 60 * 60 * 1000,  // 24 horas
       path: '/'
     });
@@ -110,15 +112,16 @@ const logout = async (req, res, next) => {
       [req.user.id, req.user.nome]
     );
 
-    const cookieSameSite = process.env.COOKIE_SAMESITE || 'Strict';
-    const isSameSiteNone = cookieSameSite.toLowerCase() === 'none';
-    const cookieSecure = isSameSiteNone || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
+    // ✅ Usar os mesmos parâmetros do cookie criado no login
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieSecure = isProduction;
+    const cookieSameSite = isProduction ? 'none' : 'lax';
 
     // ✅ Limpar cookie httpOnly
     res.clearCookie('authToken', { 
       path: '/',
       secure: cookieSecure,
-      sameSite: isSameSiteNone ? 'none' : cookieSameSite
+      sameSite: cookieSameSite
     });
 
     res.json({ success: true, message: 'Sessão terminada com sucesso' });
