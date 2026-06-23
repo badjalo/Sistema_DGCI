@@ -157,10 +157,27 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ── 404 Handler ──────────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({ error: 'Rota não encontrada' });
 });
+
+// ── Servir Frontend React (build estático) ────────────────────
+// O frontend compilado fica em ../frontend/dist/ relativo ao backend
+const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  // SPA fallback: todas as rotas não encontradas servem o index.html
+  app.get('*', (req, res, next) => {
+    // Não interceptar rotas de API
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/public/')) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+} else {
+  // ── 404 Handler (sem frontend) ────────────────────────────────
+  app.use((req, res) => {
+    res.status(404).json({ error: 'Rota não encontrada' });
+  });
+}
 
 // ── Error Handler ────────────────────────────────────────────
 app.use((err, req, res, next) => {

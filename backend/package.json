@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "build": "cd ../frontend && npm install && npm run build",
     "seed": "node src/seeds/seed.js",
     "migrate": "node src/migrations/migrate.js",
     "fix-upload-paths": "node update-upload-paths.js"
