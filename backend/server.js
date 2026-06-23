@@ -157,8 +157,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-});
-
 // ── Servir Frontend React (build estático) ────────────────────
 // O frontend compilado fica em ../frontend/dist/ relativo ao backend
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
