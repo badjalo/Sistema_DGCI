@@ -1,0 +1,366 @@
+:root {
+    --dark-navy: #072a52;
+    --accent-blue: #0e4aa6;
+    --bg-light: #ffffff;
+    --border: rgba(2, 20, 45, 0.08);
+    --text-dark: #072a52;
+    --muted: #6b7280;
+    --card-w: 860px;
+    --card-radius: 14px;
+}
+
+.wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 18px;
+}
+
+.card-stage {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.card {
+    width: 430px;
+    height: 270px;
+    border-radius: var(--card-radius);
+    position: relative;
+    display: block;
+    overflow: hidden;
+    transform-origin: center;
+    transition: all .45s ease;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 252, 0.95));
+    box-shadow: 0 10px 30px rgba(2, 10, 30, 0.12);
+}
+
+.card-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.card--front {
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+}
+
+.card--back {
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    width: 860px;
+}
+
+.front-top {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(2, 20, 45, 0.04);
+}
+
+.logo-area .logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+}
+
+.org-name {
+    color: var(--dark-navy);
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1.1;
+}
+
+.card-body {
+    display: flex;
+    gap: 14px;
+    padding: 18px;
+    align-items: stretch;
+}
+
+.photo-col {
+    width: 160px;
+}
+
+.photo-frame {
+    width: 160px;
+    height: 190px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(2, 10, 30, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover
+}
+
+.details-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px 10px
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--dark-navy);
+    margin-bottom: 8px
+}
+
+.fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px
+}
+
+.field {
+    display: flex;
+    gap: 12px;
+    align-items: center
+}
+
+.field .label {
+    min-width: 150px;
+    color: var(--dark-navy);
+    font-weight: 700;
+    font-size: 12px
+}
+
+.field .value {
+    color: var(--text-dark);
+    font-size: 14px;
+    font-weight: 700
+}
+
+.signatures {
+    display: flex;
+    gap: 18px;
+    margin-top: 8px
+}
+
+.sig {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px
+}
+
+.sig img {
+    width: 140px;
+    height: 40px;
+    object-fit: contain;
+    filter: grayscale(20%)
+}
+
+.sig-label {
+    font-size: 11px;
+    color: var(--muted)
+}
+
+.side-band {
+    width: 96px;
+    background: linear-gradient(180deg, var(--dark-navy), var(--accent-blue));
+    color: #fff;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between
+}
+
+.side-band .qr img {
+    width: 68px;
+    height: 68px
+}
+
+.side-band .validate {
+    font-size: 12px;
+    text-align: center
+}
+
+/* BACK */
+.card--back {
+    width: 860px;
+    height: 270px;
+    border-radius: var(--card-radius);
+    display: block
+}
+
+.card--back .back-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--dark-navy);
+    color: #fff;
+    padding: 12px 18px
+}
+
+.card--back .back-header .logo-small img {
+    width: 48px
+}
+
+.card--back .back-header .back-org {
+    flex: 1;
+    font-weight: 700;
+    font-size: 13px
+}
+
+.card--back .back-header .back-member {
+    text-align: right
+}
+
+.back-body {
+    display: flex;
+    gap: 18px;
+    padding: 18px
+}
+
+.back-left {
+    flex: 1
+}
+
+.back-left h3 {
+    color: var(--dark-navy);
+    font-size: 15px;
+    margin-bottom: 8px
+}
+
+.back-left p {
+    color: var(--muted);
+    line-height: 1.45
+}
+
+.back-right {
+    width: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center
+}
+
+.qr-large img {
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px
+}
+
+.back-footer {
+    background: linear-gradient(90deg, var(--dark-navy), var(--accent-blue));
+    color: #fff;
+    padding: 10px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px
+}
+
+.back-footer .contact {
+    opacity: 0.95
+}
+
+.watermark {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image: url('assets/sf-dgci-logo.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 55%
+}
+
+.front-watermark {
+    filter: grayscale(100%);
+    opacity: 0.06
+}
+
+.back-watermark {
+    filter: grayscale(100%);
+    opacity: 0.06
+}
+
+.controls {
+    margin-top: 18px;
+    text-align: center
+}
+
+.controls button {
+    background: var(--dark-navy);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 0;
+    cursor: pointer
+}
+
+.card--front.is-hidden {
+    opacity: 0;
+    transform: translateY(-8px) scale(.98);
+    pointer-events: none
+}
+
+.card--back {
+    opacity: 0;
+    transform: translateY(8px) scale(.99)
+}
+
+.card--back.is-visible {
+    opacity: 1
+}
+
+@media (max-width:1000px) {
+    .card--back {
+        width: 720px
+    }
+
+    .card-stage {
+        gap: 16px
+    }
+}
+
+@media (max-width:800px) {
+
+    .card--front,
+    .card--back {
+        width: 320px;
+        height: auto
+    }
+
+    .card-body {
+        flex-direction: column
+    }
+
+    .photo-col {
+        width: 100%
+    }
+
+    .side-band {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 10px
+    }
+
+    .back-body {
+        flex-direction: column
+    }
+
+    .watermark {
+        display: none
+    }
+}

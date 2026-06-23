@@ -4,14 +4,16 @@ node_modules/
 .pnp.js
 
 # Build outputs
-dist/
 build/
 .vite/
+# NOTA: frontend/dist é incluído no repositório para deploy no Render
+# dist/
 
 # Environment files
 .env
 .env.local
-.env.production
+# NOTA: .env.production é incluído para deploy (não contém segredos, apenas URL da API)
+# .env.production
 .env.*.local
 
 # Logs
