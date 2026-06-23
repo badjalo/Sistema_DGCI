@@ -88,6 +88,9 @@ const login = async (req, res, next) => {
 
     res.json({
       success: true,
+      // ✅ Token no body para suportar cross-domain (frontend em domínio diferente do backend)
+      // O frontend guarda em localStorage e envia via Authorization: Bearer header
+      token,
       user: {
         id: user.id,
         nome: sanitizeString(user.nome),

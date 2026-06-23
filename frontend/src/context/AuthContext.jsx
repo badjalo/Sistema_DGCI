@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // ✅ Token é enviado automaticamente via httpOnly cookie
+        // Token enviado via Authorization header (localStorage) ou httpOnly cookie
         const { data } = await api.get('/auth/me');
         if (data.success) {
           setUser(data.data);
@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         // Não autenticado - token expirado ou inválido
         setUser(null);
+        localStorage.removeItem('authToken');
       } finally {
         setLoading(false);
       }
@@ -27,10 +28,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const { data } = await api.post('/auth/login', { email, password });
+      const { data, headers } = await api.post('/auth/login', { email, password });
       if (data.success) {
-        // ✅ Token é enviado automaticamente via httpOnly cookie pelo servidor
-        // Não armazenamos nada em localStorage
+        // ✅ Guardar token em localStorage para funcionar em cross-domain
+        // O token também é enviado em httpOnly cookie pelo servidor como backup
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+        }
         setUser(data.user);
         return true;
       }
@@ -47,7 +51,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Erro no logout:', error);
     } finally {
-      // ✅ Cookie httpOnly é automaticamente limpo pelo servidor
+      // Limpar token do localStorage e cookie
+      localStorage.removeItem('authToken');
       setUser(null);
       window.location.href = '/';
     }
@@ -55,15 +60,11 @@ export const AuthProvider = ({ children }) => {
 
   const hasPermission = (permission) => {
     if (!user) return false;
-    // Administrador tem acesso a tudo
     if (user.perfil === 'administrador') return true;
 
-    // Simplificando permissões no frontend (verificação real no backend)
     const roleMap = {
-      // Presidente e auditor: apenas consulta — sem criação, edição ou eliminação
       presidente: ['read'],
       auditor: ['read'],
-      // Restantes perfis com as suas permissões operacionais
       tesoureiro: ['financeiro', 'quotas', 'read'],
       secretario: ['membros', 'documentos', 'comunicados', 'read'],
       operador: ['read'],
