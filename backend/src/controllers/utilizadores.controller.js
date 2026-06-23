@@ -36,11 +36,24 @@ const criar = async (req, res, next) => {
 const atualizar = async (req, res, next) => {
   try {
     const { nome, email, perfil, ativo, membro_id, preferencias } = req.body;
+
+    const setParts = [];
+    const params = [];
+
+    if (nome !== undefined)    { params.push(nome);                    setParts.push(`nome = $${params.length}`); }
+    if (email !== undefined)   { params.push(email.toLowerCase());     setParts.push(`email = $${params.length}`); }
+    if (perfil !== undefined)  { params.push(perfil);                  setParts.push(`perfil = $${params.length}`); }
+    if (ativo !== undefined)   { params.push(ativo);                   setParts.push(`ativo = $${params.length}`); }
+    // membro_id can be explicitly set to null (to clear association)
+    if (membro_id !== undefined) { params.push(membro_id || null);     setParts.push(`membro_id = $${params.length}`); }
+    if (preferencias !== undefined) { params.push(JSON.stringify(preferencias)); setParts.push(`preferencias = $${params.length}`); }
+
+    if (!setParts.length) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+
+    params.push(req.params.id);
     const result = await query(
-      `UPDATE utilizadores SET nome = COALESCE($1, nome), email = COALESCE($2, email),
-       perfil = COALESCE($3, perfil), ativo = COALESCE($4, ativo), membro_id = COALESCE($5, membro_id),
-       preferencias = COALESCE($6, preferencias) WHERE id = $7 RETURNING id, nome, email, perfil, ativo`,
-      [nome, email?.toLowerCase(), perfil, ativo, membro_id, preferencias ? JSON.stringify(preferencias) : null, req.params.id]
+      `UPDATE utilizadores SET ${setParts.join(', ')} WHERE id = $${params.length} RETURNING id, nome, email, perfil, ativo`,
+      params
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Utilizador não encontrado' });
     res.json({ success: true, data: result.rows[0] });

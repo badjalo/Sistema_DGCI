@@ -437,4 +437,49 @@ const obterCartao = async (req, res, next) => {
   }
 };
 
-module.exports = { listar, obter, criar, atualizar, eliminar, pagamentosMembro, estatisticas, obterCartao, nextNumero, obterQR, obterQRByNumero };
+/** POST /api/membros/cartao/lote */
+const obterCartoesLote = async (req, res, next) => {
+  try {
+    const { membro_ids } = req.body;
+    if (!Array.isArray(membro_ids) || !membro_ids.length) {
+      return res.status(400).json({ error: 'Nenhum membro selecionado para exportação' });
+    }
+
+    const result = await query(
+      `SELECT m.*, d.nome as departamento_nome, c.nome as cargo_nome
+       FROM membros m
+       LEFT JOIN departamentos d ON d.id = m.departamento_id
+       LEFT JOIN cargos c ON c.id = m.cargo_id
+       WHERE m.id = ANY($1::int[])
+       ORDER BY m.nome_completo ASC`,
+      [membro_ids]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'Nenhum membro correspondente encontrado' });
+    }
+
+    const membros = result.rows;
+
+    for (const membro of membros) {
+      const cardResult = await query(
+        `SELECT data_validade FROM cartoes WHERE membro_id = $1 AND estado = true ORDER BY criado_em DESC LIMIT 1`,
+        [membro.id]
+      );
+      if (cardResult.rows.length) {
+        membro.data_validade = cardResult.rows[0].data_validade;
+      }
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="cartoes_membros_lote.pdf"');
+
+    const { generateCardsBatch } = require('../utils/cardGenerator');
+    await generateCardsBatch(membros, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { listar, obter, criar, atualizar, eliminar, pagamentosMembro, estatisticas, obterCartao, obterCartoesLote, nextNumero, obterQR, obterQRByNumero };
+

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const prevPath = useRef(location.pathname);
 
   useEffect(() => {
     const handleResize = () => {
@@ -21,6 +23,11 @@ const Layout = () => {
     document.documentElement.setAttribute('data-theme', saved);
   }, []);
 
+  /* Track path changes so transition re-runs */
+  useEffect(() => {
+    prevPath.current = location.pathname;
+  }, [location.pathname]);
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
@@ -30,7 +37,8 @@ const Layout = () => {
 
         <main className="flex-1 overflow-y-auto" style={{ background: 'var(--bg)' }}>
           <div
-            className="mx-auto px-4 md:px-6 py-6"
+            key={location.pathname}
+            className="page-enter mx-auto px-4 md:px-6 py-6"
             style={{ maxWidth: '1440px' }}
           >
             <Outlet />

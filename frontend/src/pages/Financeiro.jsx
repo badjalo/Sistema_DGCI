@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 import { DollarSign, Plus, ArrowUpRight, ArrowDownRight, Search, FileText, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import PageHeader from '../components/PageHeader';
 
 const Financeiro = () => {
   const [transacoes, setTransacoes] = useState([]);
@@ -110,66 +112,45 @@ const Financeiro = () => {
     );
 
   return (
-    <div className="fade-in space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Controlo Financeiro</h1>
-          <p className="text-slate-500 text-sm mt-1">Gestão de receitas, despesas e movimentos</p>
-        </div>
-
-        {/* Year/Month Navigator — prominently in header */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-white border border-slate-200 shadow-sm rounded-xl px-2 py-1.5">
-            <button
-              type="button"
-              onClick={mesAnterior}
-              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
-              title="Mês anterior"
-            >
-              <ChevronLeft size={18} />
-            </button>
-
-            <select
-              value={mesSelecionado}
-              onChange={(e) => setMesSelecionado(Number(e.target.value))}
-              className="select-inline"
-            >
-              {monthNames.map((nome, i) => (
-                <option key={i} value={i + 1}>{nome}</option>
-              ))}
-            </select>
-
-            <select
-              value={anoSelecionado}
-              onChange={(e) => setAnoSelecionado(Number(e.target.value))}
-              className="select-inline"
-            >
-              {[new Date().getFullYear() - 3, new Date().getFullYear() - 2, new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((ano) => (
-                <option key={ano} value={ano}>{ano}</option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={mesSeguinte}
-              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
-              title="Mês seguinte"
-            >
-              <ChevronRight size={18} />
+    <div className="space-y-6">
+      <PageHeader
+        icon={DollarSign}
+        title="Controlo Financeiro"
+        subtitle="Gestão de receitas, despesas e movimentos"
+        actions={
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 rounded-xl px-2 py-1.5" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+              <button type="button" onClick={mesAnterior} className="p-1.5 rounded-lg transition-colors btn-icon" title="Mês anterior">
+                <ChevronLeft size={18} />
+              </button>
+              <select value={mesSelecionado} onChange={(e) => setMesSelecionado(Number(e.target.value))} className="select-inline">
+                {monthNames.map((nome, i) => (<option key={i} value={i + 1}>{nome}</option>))}
+              </select>
+              <select value={anoSelecionado} onChange={(e) => setAnoSelecionado(Number(e.target.value))} className="select-inline">
+                {[new Date().getFullYear() - 3, new Date().getFullYear() - 2, new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((ano) => (
+                  <option key={ano} value={ano}>{ano}</option>
+                ))}
+              </select>
+              <button type="button" onClick={mesSeguinte} className="p-1.5 rounded-lg transition-colors btn-icon" title="Mês seguinte">
+                <ChevronRight size={18} />
+              </button>
+            </div>
+            <button onClick={() => setShowModal(true)} className="btn btn-primary">
+              <Plus size={18} /> Novo Movimento
             </button>
           </div>
-
-          <button onClick={() => setShowModal(true)} className="btn btn-primary flex items-center gap-2">
-            <Plus size={18} /> Novo Movimento
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Summary Cards - Global (ano selecionado) */}
       <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Resumo Anual — {anoSelecionado}</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <p
+          className="text-xs font-bold uppercase tracking-widest mb-3"
+          style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}
+        >
+          Resumo Anual — {anoSelecionado}
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
@@ -226,10 +207,13 @@ const Financeiro = () => {
 
       {/* Monthly Summary */}
       <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+        <p
+          className="text-xs font-bold uppercase tracking-widest mb-3"
+          style={{ color: 'var(--text-3)', letterSpacing: '0.1em' }}
+        >
           Resumo Mensal — {monthNames[mesSelecionado - 1]} {anoSelecionado}
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
@@ -343,7 +327,7 @@ const Financeiro = () => {
         </div>
       </div>
 
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-backdrop">
           <div className="modal-card max-w-md">
             <div className="modal-header">
@@ -455,7 +439,8 @@ const Financeiro = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

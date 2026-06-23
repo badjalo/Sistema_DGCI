@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
-import logoImg from '../../assets/logo.jpeg';
+import logoImg from '../../assets/logo.png';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -112,41 +112,75 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
     border: '#cfd9ee',
   };
 
+  // Helper: pre-load all images inside an element with crossOrigin = 'anonymous'
+  const preloadImages = (el) => {
+    const imgs = Array.from(el.querySelectorAll('img'));
+    return Promise.all(imgs.map(img =>
+      new Promise(resolve => {
+        const src = img.src;
+        img.crossOrigin = 'anonymous';
+        img.src = '';
+        img.onload = resolve;
+        img.onerror = resolve;
+        img.src = src;
+      })
+    ));
+  };
+
+  // Helper: capture a card face element without being affected by 3D flip CSS
+  const captureCard = async (ref) => {
+    // Clone the element into a temporary off-screen container — no 3D transforms
+    const original = ref.current;
+    if (!original) throw new Error('Card ref not found');
+
+    const clone = original.cloneNode(true);
+    const wrapper = document.createElement('div');
+    Object.assign(wrapper.style, {
+      position: 'fixed',
+      top: '-9999px',
+      left: '-9999px',
+      width: `${original.offsetWidth}px`,
+      height: `${original.offsetHeight}px`,
+      overflow: 'hidden',
+      zIndex: '-1',
+    });
+    // Reset any 3D transforms on the clone
+    clone.style.transform = 'none';
+    clone.style.position = 'relative';
+    clone.style.backfaceVisibility = 'visible';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    // Pre-load images inside clone
+    await preloadImages(wrapper);
+
+    const canvas = await html2canvas(wrapper, {
+      scale: 4,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      width: original.offsetWidth,
+      height: original.offsetHeight,
+    });
+
+    document.body.removeChild(wrapper);
+    return canvas;
+  };
+
   const exportPNG = async () => {
-    const t = toast.loading('A preparar ficheiros HD para exportação...');
+    const t = toast.loading('A preparar imagens HD...');
     try {
-      const originalFlip = isFlipped;
-
-      const container = document.getElementById('cartao-container');
-      if (container) container.style.transform = 'scale(1)';
-      if (cardFrontRef.current) cardFrontRef.current.style.transition = 'none';
-      if (cardBackRef.current) cardBackRef.current.style.transition = 'none';
-
-      setIsFlipped(false);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const frontCanvas = await html2canvas(cardFrontRef.current, {
-        scale: 4,
-        useCORS: true,
-      });
-
-      setIsFlipped(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const backCanvas = await html2canvas(cardBackRef.current, {
-        scale: 4,
-        useCORS: true,
-      });
-
-      if (cardFrontRef.current) cardFrontRef.current.style.transition = '';
-      if (cardBackRef.current) cardBackRef.current.style.transition = '';
-      if (container) container.style.transform = '';
-      setIsFlipped(originalFlip);
+      const [frontCanvas, backCanvas] = await Promise.all([
+        captureCard(cardFrontRef),
+        captureCard(cardBackRef),
+      ]);
 
       const frontLink = document.createElement('a');
       frontLink.download = `cartao_${membro.numero_membro}_frente.png`;
       frontLink.href = frontCanvas.toDataURL('image/png');
       frontLink.click();
+
+      await new Promise(r => setTimeout(r, 300));
 
       const backLink = document.createElement('a');
       backLink.download = `cartao_${membro.numero_membro}_verso.png`;
@@ -156,42 +190,19 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
       toast.dismiss(t);
       toast.success('Imagens PNG HD descarregadas!');
     } catch (err) {
-      console.error(err);
+      console.error('[exportPNG]', err);
       toast.dismiss(t);
-      toast.error('Erro ao exportar imagens.');
+      toast.error('Erro ao exportar imagens: ' + err.message);
     }
   };
 
   const exportPDF = async () => {
     const t = toast.loading('A gerar PDF de impressão PVC (CR80)...');
     try {
-      const originalFlip = isFlipped;
-
-      const container = document.getElementById('cartao-container');
-      if (container) container.style.transform = 'scale(1)';
-      if (cardFrontRef.current) cardFrontRef.current.style.transition = 'none';
-      if (cardBackRef.current) cardBackRef.current.style.transition = 'none';
-
-      setIsFlipped(false);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const frontCanvas = await html2canvas(cardFrontRef.current, {
-        scale: 4,
-        useCORS: true,
-      });
-
-      setIsFlipped(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const backCanvas = await html2canvas(cardBackRef.current, {
-        scale: 4,
-        useCORS: true,
-      });
-
-      if (cardFrontRef.current) cardFrontRef.current.style.transition = '';
-      if (cardBackRef.current) cardBackRef.current.style.transition = '';
-      if (container) container.style.transform = '';
-      setIsFlipped(originalFlip);
+      const [frontCanvas, backCanvas] = await Promise.all([
+        captureCard(cardFrontRef),
+        captureCard(cardBackRef),
+      ]);
 
       const pdf = new jsPDF({
         orientation: 'landscape',
@@ -199,21 +210,18 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
         format: [85.6, 53.98],
       });
 
-      const frontImgData = frontCanvas.toDataURL('image/jpeg', 1.0);
-      pdf.addImage(frontImgData, 'JPEG', 0, 0, 85.6, 53.98);
-
+      pdf.addImage(frontCanvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 85.6, 53.98);
       pdf.addPage([85.6, 53.98], 'landscape');
-      const backImgData = backCanvas.toDataURL('image/jpeg', 1.0);
-      pdf.addImage(backImgData, 'JPEG', 0, 0, 85.6, 53.98);
+      pdf.addImage(backCanvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 85.6, 53.98);
 
       pdf.save(`cartao_${membro.numero_membro}_impressao.pdf`);
 
       toast.dismiss(t);
-      toast.success('PDF para impressão PVC descarregado com sucesso!');
+      toast.success('PDF para impressão PVC descarregado!');
     } catch (err) {
-      console.error(err);
+      console.error('[exportPDF]', err);
       toast.dismiss(t);
-      toast.error('Erro ao gerar o PDF.');
+      toast.error('Erro ao gerar PDF: ' + err.message);
     }
   };
 
@@ -662,17 +670,20 @@ Estado: ${membro.estado === 'ativo' ? 'Ativo' : 'Inativo'}`;
                 padding: 0 48px;
                 background: #0b1f4e;
                 color: rgba(255,255,255,0.95);
-                font-size: 14px;
-                letter-spacing: 0.04em;
+                font-size: 18px;
+                font-weight: 500;
+                letter-spacing: 0.03em;
+                line-height: 1.4;
               }
               .cartao-preview .footer div {
-                max-width: 240px;
+                max-width: 280px;
               }
               .cartao-preview .footer .separator {
                 width: 1px;
                 height: 48px;
                 background: rgba(255,255,255,0.18);
                 margin: 0 18px;
+                flex-shrink: 0;
               }
             `}</style>
 

@@ -48,12 +48,14 @@ const fotosDir = path.join(uploadsDir, 'fotos');
 const assetsDir = path.join(uploadsDir, 'assets');
 const documentosDir = path.join(uploadsDir, 'documentos');
 const assinaturasDir = path.join(uploadsDir, 'assinaturas');
+const obituarioDir = path.join(uploadsDir, 'obituario');
 try {
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   if (!fs.existsSync(fotosDir)) fs.mkdirSync(fotosDir, { recursive: true });
   if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
   if (!fs.existsSync(documentosDir)) fs.mkdirSync(documentosDir, { recursive: true });
   if (!fs.existsSync(assinaturasDir)) fs.mkdirSync(assinaturasDir, { recursive: true });
+  if (!fs.existsSync(obituarioDir)) fs.mkdirSync(obituarioDir, { recursive: true });
 } catch (err) {
   console.error('Não foi possível criar diretórios de upload:', err);
 }
@@ -136,6 +138,9 @@ app.use('/api/cartoes', require('./src/routes/cartoes.routes'));
 app.use('/api/dashboard', require('./src/routes/dashboard.routes'));
 app.use('/api/configuracoes', require('./src/routes/configuracoes.routes'));
 app.use('/api/auditoria', require('./src/routes/auditoria.routes'));
+app.use('/api/slider', require('./src/routes/slider.routes'));
+app.use('/api/sindicato', require('./src/routes/sindicato.routes'));
+app.use('/api/contacto', require('./src/routes/contacto.routes'));
 
 // ── Endpoint de Download Seguro ──────────────────────────────
 const { authenticate } = require('./src/middleware/auth');

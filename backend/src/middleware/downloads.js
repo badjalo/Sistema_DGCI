@@ -82,7 +82,7 @@ const secureDownload = (uploadsBasePath) => {
 };
 
 /**
- * Middleware para servir uploads publicamente (apenas imagens)
+ * Middleware para servir uploads publicamente (imagens + documentos)
  * Com proteção contra path traversal
  */
 const servePublicUpload = (uploadsBasePath) => {
@@ -90,8 +90,8 @@ const servePublicUpload = (uploadsBasePath) => {
         try {
             const { subdir, filename } = req.params;
 
-            // Apenas permitir servir imagens de certas subpastas
-            const allowedSubdirs = ['fotos', 'assinaturas', 'assets'];
+            // Apenas permitir servir ficheiros de certas subpastas
+            const allowedSubdirs = ['fotos', 'assinaturas', 'assets', 'slider', 'documentos', 'obituario'];
             if (!allowedSubdirs.includes(subdir)) {
                 return res.status(403).json({ error: 'Tipo de ficheiro não permitido' });
             }
@@ -107,16 +107,64 @@ const servePublicUpload = (uploadsBasePath) => {
                 return res.status(400).json({ error: 'Caminho inválido' });
             }
 
-            // Verificar que é imagem
+            // Verificar extensão permitida
             const ext = path.extname(filename).toLowerCase();
-            const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+            // Tipos permitidos por subpasta
+            const allowedExtsBySubdir = {
+                fotos: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+                assinaturas: ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'],
+                assets: ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.css', '.js', '.json'],
+                slider: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+                obituario: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+                documentos: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.rtf', '.odt', '.ods']
+            };
+
+            const allowedExts = allowedExtsBySubdir[subdir] || [];
             if (!allowedExts.includes(ext)) {
-                return res.status(403).json({ error: 'Apenas imagens são permitidas' });
+                return res.status(403).json({ error: 'Tipo de ficheiro não permitido' });
             }
 
             // Servir ficheiro
             if (!fs.existsSync(normalizedPath)) {
-                return res.status(404).json({ error: 'Imagem não encontrada' });
+                return res.status(404).json({ error: 'Ficheiro não encontrado' });
+            }
+
+            // Definir content-type apropriado
+            const mimeTypes = {
+                '.pdf': 'application/pdf',
+                '.doc': 'application/msword',
+                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                '.xls': 'application/vnd.ms-excel',
+                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                '.ppt': 'application/vnd.ms-powerpoint',
+                '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                '.txt': 'text/plain',
+                '.rtf': 'application/rtf',
+                '.odt': 'application/vnd.oasis.opendocument.text',
+                '.ods': 'application/vnd.oasis.opendocument.spreadsheet',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.webp': 'image/webp',
+                '.gif': 'image/gif',
+                '.svg': 'image/svg+xml'
+            };
+
+            const contentType = mimeTypes[ext] || 'application/octet-stream';
+            res.setHeader('Content-Type', contentType);
+
+            // ✅ CORS para html2canvas e outros clientes
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET');
+            res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+            // Imagens e documentos visíveis inline; outros como download
+            const imageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+            if (imageExts.includes(ext) || ext === '.pdf') {
+                res.setHeader('Content-Disposition', 'inline');
+            } else {
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
             }
 
             res.sendFile(normalizedPath);

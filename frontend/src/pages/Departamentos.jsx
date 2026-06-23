@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 import { Building, Plus, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -149,7 +150,7 @@ const Departamentos = () => {
         ))}
       </div>
 
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-backdrop">
           <div className="modal-card max-w-md">
             <div className="modal-header">
@@ -253,7 +254,8 @@ const Departamentos = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

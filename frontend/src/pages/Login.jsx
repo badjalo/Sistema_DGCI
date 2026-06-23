@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import { Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
@@ -17,6 +19,9 @@ const Login = () => {
     const savedRemember = localStorage.getItem('rememberMe') === 'true';
     if (savedEmail) setEmail(savedEmail);
     if (savedRemember) setRememberMe(true);
+    // Trigger mount animation
+    const t = setTimeout(() => setMounted(true), 10);
+    return () => clearTimeout(t);
   }, []);
 
   if (user) {
@@ -28,6 +33,14 @@ const Login = () => {
     if (!email || !password) {
       toast.error('Preencha todos os campos');
       return;
+    }
+
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', email);
+      localStorage.setItem('rememberMe', 'true');
+    } else {
+      localStorage.removeItem('rememberedEmail');
+      localStorage.removeItem('rememberMe');
     }
 
     setIsSubmitting(true);
@@ -47,103 +60,247 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Gradient Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-        <div className="absolute top-40 right-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-        <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden gradient-animated"
+    >
+      {/* Animated blobs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="animate-float absolute"
+          style={{
+            top: '8%',
+            left: '10%',
+            width: '400px',
+            height: '400px',
+            background: 'radial-gradient(circle, rgba(59,111,245,0.18) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div
+          className="animate-float-delay absolute"
+          style={{
+            top: '50%',
+            right: '8%',
+            width: '350px',
+            height: '350px',
+            background: 'radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div
+          className="animate-float-delay2 absolute"
+          style={{
+            bottom: '10%',
+            left: '30%',
+            width: '300px',
+            height: '300px',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)',
+            borderRadius: '50%',
+            filter: 'blur(40px)',
+          }}
+        />
+
+        {/* Grid overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)
+            `,
+            backgroundSize: '48px 48px',
+          }}
+        />
       </div>
 
-      <div className="w-full max-w-md z-10 fade-in">
+      {/* Main container */}
+      <div
+        className="w-full max-w-md z-10"
+        style={{
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'translateY(0)' : 'translateY(24px)',
+          transition: 'opacity 0.5s ease, transform 0.5s cubic-bezier(0.16,1,0.3,1)',
+        }}
+      >
         {/* Logo & Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mb-6 mx-auto">
+          <div
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mx-auto mb-5"
+            style={{
+              background: 'linear-gradient(135deg, #3b6ff5 0%, #6366f1 100%)',
+              boxShadow: '0 8px 32px rgba(59,111,245,0.45), 0 0 0 1px rgba(255,255,255,0.1)',
+              animation: 'scaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both',
+            }}
+          >
             <ShieldCheck size={32} className="text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">SF-DGCI</h1>
-          <p className="text-slate-400 text-sm">Sistema de Gestão Sindical</p>
+
+          <h1
+            className="text-4xl font-bold text-white tracking-tight mb-1"
+            style={{ animation: 'fadeUp 0.4s ease-out 0.2s both' }}
+          >
+            SF-DGCI
+          </h1>
+          <p
+            className="text-sm"
+            style={{ color: 'rgba(148,163,184,0.9)', animation: 'fadeUp 0.4s ease-out 0.3s both' }}
+          >
+            Sistema de Gestão Sindical
+          </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 border border-slate-200">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Bem-vindo de volta</h2>
+        <div
+          className="glass-surface rounded-2xl p-8"
+          style={{
+            animation: 'fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s both',
+          }}
+        >
+          {/* Card header accent */}
+          <div
+            className="flex items-center gap-3 mb-6"
+          >
+            <div>
+              <h2
+                className="text-xl font-bold"
+                style={{ color: 'var(--text-1)' }}
+              >
+                Bem-vindo de volta
+              </h2>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
+                Aceda à sua conta para continuar
+              </p>
+            </div>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* Email Input */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Email Institucional</label>
+            <div className="form-group mb-0">
+              <label className="form-label">Email Institucional</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Mail
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  size={16}
+                  style={{ color: 'var(--text-3)', transition: 'color 0.15s' }}
+                />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting}
                   placeholder="usuario@sf-dgci.gw"
-                  className="form-control pl-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="form-control"
+                  style={{ paddingLeft: '2.5rem' }}
+                  id="login-email"
                 />
               </div>
             </div>
 
             {/* Password Input */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Palavra-passe</label>
+            <div className="form-group mb-0">
+              <label className="form-label">Palavra-passe</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Lock
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  size={16}
+                  style={{ color: 'var(--text-3)' }}
+                />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSubmitting}
                   placeholder="••••••••"
-                  className="form-control pl-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="form-control"
+                  style={{ paddingLeft: '2.5rem', paddingRight: '2.75rem' }}
+                  id="login-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded transition-all hover:scale-110 active:scale-90"
+                  style={{ color: 'var(--text-3)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
             {/* Remember & Forgot */}
-            <div className="flex items-center justify-between pt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer"
-                />
-                <span className="text-sm text-slate-600">Lembrar sessão</span>
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded cursor-pointer"
+                    style={{ accentColor: 'var(--primary)' }}
+                    id="login-remember"
+                  />
+                </div>
+                <span className="text-sm" style={{ color: 'var(--text-2)' }}>Lembrar sessão</span>
               </label>
-              <a href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <Link
+                to="/esqueci-senha"
+                className="text-sm font-medium transition-opacity hover:opacity-75"
+                style={{ color: 'var(--primary)' }}
+              >
                 Esqueceu a password?
-              </a>
+              </Link>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="btn btn-primary w-full mt-8 py-3 text-base font-semibold"
+              className="btn btn-primary w-full mt-2"
+              style={{ padding: '0.75rem 1.25rem', fontSize: '0.9375rem' }}
+              id="login-submit"
             >
               {isSubmitting ? (
-                <div className="spinner" style={{ width: '18px', height: '18px', borderLeftColor: 'white' }}></div>
+                <>
+                  <div
+                    className="spinner"
+                    style={{ width: '18px', height: '18px', borderLeftColor: 'white', borderWidth: '2px' }}
+                  />
+                  A autenticar…
+                </>
               ) : (
-                'Entrar'
+                <>
+                  Entrar
+                  <ArrowRight size={16} style={{ transition: 'transform 0.2s' }} />
+                </>
               )}
             </button>
           </form>
 
           {/* Footer */}
-          <div className="mt-8 pt-6 text-center border-t border-slate-200">
-            <p className="text-xs text-slate-500">
-              Acesso restrito a membros autorizados • Auditado e protegido
+          <div
+            className="mt-6 pt-5 text-center border-t"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+              Acesso restrito a membros autorizados
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+              Auditado e protegido • SF-DGCI
             </p>
           </div>
         </div>
 
         {/* Trust Badge */}
-        <div className="mt-6 text-center text-slate-400 text-xs">
-          <p>Ministério das Finanças • Guiné-Bissau</p>
+        <div
+          className="mt-5 text-center"
+          style={{ animation: 'fadeUp 0.4s ease-out 0.4s both' }}
+        >
+          <p className="text-xs" style={{ color: 'rgba(148,163,184,0.6)' }}>
+            Ministério das Finanças • República da Guiné-Bissau
+          </p>
         </div>
       </div>
     </div>

@@ -1,131 +1,86 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api, { getBackendUrl } from '../services/api';
 import {
   Star, Shield, Users, FileText, CreditCard, BarChart3,
   Bell, Settings, CheckCircle, ArrowRight, Menu, X,
-  Building2, Phone, Mail, MapPin, Zap, Lock, Globe, Award
+  Building2, Phone, Mail, MapPin, Zap, Lock, Globe, Award, Calendar, Heart, Tag, Download
 } from 'lucide-react';
-import logo from '../assets/logo.jpeg';
+import logo from '../assets/logo.png';
+import PublicNavbar from '../components/PublicNavbar';
 
-// ─── NAVBAR ────────────────────────────────────────────────────────────────
-const Navbar = ({ configs }) => {
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
+// ─── ANIMATED COUNTER HOOK ───────────────────────────────────────────────────
+const useCountUp = (target, duration = 1800, enabled = false) => {
+  const [count, setCount] = useState(0);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    if (!enabled || typeof target !== 'number') return;
+    if (target === 0) { setCount(0); return; }
+    let start = null;
+    const step = (timestamp) => {
+      if (!start) start = timestamp;
+      const progress = Math.min((timestamp - start) / duration, 1);
+      // easeOutExpo
+      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setCount(Math.floor(ease * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target, duration, enabled]);
+  return count;
+};
 
-  const navLinks = [
-    { label: 'Funcionalidades', href: '#features' },
-    { label: 'Sobre', href: '#about' },
-    { label: 'Contacto', href: '#contact' },
-  ];
-
+// ─── ANIMATED STAT ITEM ──────────────────────────────────────────────────────
+const AnimatedStat = ({ rawValue, label, enabled }) => {
+  const isNumeric = typeof rawValue === 'number';
+  const animated = useCountUp(isNumeric ? rawValue : 0, 1800, enabled && isNumeric);
+  const displayValue = isNumeric ? animated.toLocaleString('pt-PT') : rawValue;
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white shadow-md py-2' : 'bg-white/95 backdrop-blur-sm py-3'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          {/* Logo + Name */}
-          <div className="flex items-center gap-3">
-            <img
-              src={logo}
-              alt="SF-DGCI Logo"
-              className="w-11 h-11 rounded-full object-cover ring-2 ring-yellow-400 shadow"
-            />
-            <div className="leading-tight">
-              <p className="text-sm font-black text-[#1a2f5e] tracking-wide">{configs?.sigla || 'SF-DGCI'}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Sistema de Gestão Sindical</p>
-            </div>
-          </div>
-
-          {/* Desktop Links */}
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                className="text-sm font-semibold text-gray-600 hover:text-[#1a2f5e] transition-colors duration-200"
-              >
-                {l.label}
-              </a>
-            ))}
-          </div>
-
-          {/* CTA */}
-          <div className="hidden md:block">
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 bg-[#1a2f5e] text-white text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-[#0f1f42] transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <Lock size={14} />
-              Entrar no Sistema
-            </Link>
-          </div>
-
-          {/* Mobile toggle */}
-          <button
-            className="md:hidden text-gray-600"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {menuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4 space-y-3">
-            {navLinks.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                onClick={() => setMenuOpen(false)}
-                className="block text-sm font-semibold text-gray-700 hover:text-[#1a2f5e]"
-              >
-                {l.label}
-              </a>
-            ))}
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 bg-[#1a2f5e] text-white text-sm font-bold px-5 py-2.5 rounded-xl mt-2"
-            >
-              <Lock size={14} /> Entrar no Sistema
-            </Link>
-          </div>
-        )}
-      </div>
-    </nav>
+    <div className="border border-white/15 bg-white/5 backdrop-blur-sm rounded-xl px-2 py-3 text-center flex flex-col items-center justify-center min-w-0">
+      <p className="text-sm sm:text-base font-black text-yellow-400 leading-tight break-words w-full tabular-nums">
+        {displayValue}
+      </p>
+      <p className="text-slate-400 text-[10px] mt-1 font-medium leading-tight">{label}</p>
+    </div>
   );
 };
 
+
+
+
 // ─── HERO ───────────────────────────────────────────────────────────────────
 const Hero = ({ configs }) => {
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('pt-GW', {
-      style: 'currency',
-      currency: 'XOF',
-      maximumFractionDigits: 0
-    }).format(val);
-  };
+  const sectionRef = useRef(null);
+  const [inView, setInView] = useState(false);
 
-  const stats = [
-    { value: configs?.stats?.totalMembros ?? 0, label: 'Membros Registados' },
-    { value: configs?.stats?.totalFundoSocial ?? 0, label: 'Fundo Social' },
-    { value: formatCurrency(configs?.stats?.totalReceita ?? 0), label: 'Total de Receita' },
-    { value: formatCurrency(configs?.stats?.totalDespesa ?? 0), label: 'Total de Despesa' },
-    { value: formatCurrency(configs?.stats?.saldoDisponivel ?? 0), label: 'Saldo Disponível' },
-    { value: '100%', label: 'Seguro & Digital' },
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const rawStats = [
+    { rawValue: configs?.stats?.totalMembros ?? 0, label: 'Membros Registados' },
+    { rawValue: configs?.stats?.totalFundoSocial ?? 0, label: 'No Fundo Social' },
+    {
+      rawValue: new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(configs?.stats?.totalReceita ?? 0),
+      label: 'Total de Receita'
+    },
+    {
+      rawValue: new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(configs?.stats?.totalDespesa ?? 0),
+      label: 'Total de Despesa'
+    },
+    {
+      rawValue: new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(configs?.stats?.saldoDisponivel ?? 0),
+      label: 'Saldo Disponível'
+    },
+    { rawValue: '100%', label: 'Seguro & Digital' },
   ];
 
   return (
-    <section className="relative min-h-screen flex flex-col justify-center overflow-hidden pt-20">
+    <section ref={sectionRef} className="relative min-h-screen flex flex-col justify-center overflow-hidden pt-20">
       {/* Background gradient */}
       <div
         className="absolute inset-0 z-0"
@@ -189,24 +144,12 @@ const Hero = ({ configs }) => {
           >
             Aceder ao Sistema <ArrowRight size={18} />
           </Link>
-          <a
-            href="#features"
-            className="inline-flex items-center justify-center gap-2 border-2 border-white/30 text-white font-bold text-base px-8 py-3.5 rounded-xl hover:bg-white/10 transition-all duration-200"
-          >
-            Ver Funcionalidades
-          </a>
         </div>
 
-        {/* Stats bar */}
+        {/* Animated stats bar */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 w-full max-w-5xl">
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              className="border border-white/15 bg-white/5 backdrop-blur-sm rounded-xl px-2 py-3 text-center flex flex-col items-center justify-center min-w-0"
-            >
-              <p className="text-sm sm:text-base font-black text-yellow-400 leading-tight break-words w-full">{s.value}</p>
-              <p className="text-slate-400 text-[10px] mt-1 font-medium leading-tight">{s.label}</p>
-            </div>
+          {rawStats.map((s) => (
+            <AnimatedStat key={s.label} rawValue={s.rawValue} label={s.label} enabled={inView} />
           ))}
         </div>
       </div>
@@ -214,214 +157,416 @@ const Hero = ({ configs }) => {
   );
 };
 
-// ─── FEATURES ───────────────────────────────────────────────────────────────
-const features = [
-  {
-    icon: <Users size={22} />,
-    title: 'Gestão de Membros',
-    desc: 'Registo completo de filiados com perfis, fotos, dados profissionais e histórico de atividade sindical.',
-  },
-  {
-    icon: <CreditCard size={22} />,
-    title: 'Cartão Digital',
-    desc: 'Emissão de cartões de identificação profissionais com QR Code, exportáveis em alta resolução para impressão.',
-  },
-  {
-    icon: <BarChart3 size={22} />,
-    title: 'Controlo Financeiro',
-    desc: 'Gestão completa de quotas mensais, pagamentos, dívidas e relatórios financeiros automatizados.',
-  },
-  {
-    icon: <FileText size={22} />,
-    title: 'Documentos',
-    desc: 'Repositório centralizado de documentos oficiais com upload seguro, categorização e acesso controlado.',
-  },
-  {
-    icon: <Bell size={22} />,
-    title: 'Comunicados',
-    desc: 'Sistema de notificações e comunicados internos para manter todos os membros informados e alinhados.',
-  },
-  {
-    icon: <Shield size={22} />,
-    title: 'Segurança & Auditoria',
-    desc: 'Autenticação protegida, controlo de acessos por perfil e registo completo de todas as ações no sistema.',
-  },
-];
 
-const FeaturesSection = () => (
-  <section id="features" className="bg-gray-50 py-24">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 bg-[#1a2f5e]/10 text-[#1a2f5e] text-xs font-bold px-4 py-1.5 rounded-full mb-4 tracking-widest uppercase">
-          <Zap size={12} /> Funcionalidades
-        </div>
-        <h2 className="text-3xl sm:text-4xl font-black text-[#0f1f42] mb-4">
-          Tudo o que precisa, num só lugar
-        </h2>
-        <p className="text-gray-500 text-base max-w-xl mx-auto">
-          Uma plataforma completa, moderna e intuitiva para a gestão eficiente do seu sindicato.
-        </p>
-      </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {features.map((f, i) => (
-          <div
-            key={i}
-            className="group bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-yellow-400/50 transition-all duration-300 cursor-default"
-          >
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#1a2f5e] text-white mb-4 group-hover:bg-yellow-400 group-hover:text-[#0f1f42] transition-colors duration-300">
-              {f.icon}
+// ─── NEWS SECTION ───────────────────────────────────────────────────────────
+const NewsSection = () => {
+  const [news, setNews] = useState([]);
+  const [loadingNews, setLoadingNews] = useState(true);
+  const [selectedNews, setSelectedNews] = useState(null);
+  const [likedIds, setLikedIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sf_liked_news') || '[]'); }
+    catch { return []; }
+  });
+  const [likeCounts, setLikeCounts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sf_like_counts') || '{}'); }
+    catch { return {}; }
+  });
+
+  useEffect(() => { fetchNews(); }, []);
+
+  const fetchNews = async () => {
+    try {
+      setLoadingNews(true);
+      const response = await api.get('/comunicados/publicos');
+      if (response.data.success && response.data.data) {
+        const BACKEND = getBackendUrl();
+        const buildImgUrl = (url) => {
+          if (!url) return null;
+          if (url.startsWith('http')) return url;
+          return `${BACKEND}${url}`;
+        };
+        const newsData = response.data.data.slice(0, 3).map(item => ({
+          id: item.id,
+          title: item.titulo,
+          excerpt: item.conteudo?.substring(0, 120) + '...' || 'Sem descrição',
+          content: item.conteudo || 'Sem conteúdo disponível',
+          category: mapCategory(item.tipo),
+          tipo: item.tipo,
+          date: item.data_publicacao || item.criado_em,
+          author: item.autor_nome || 'Administração',
+          foto_url: buildImgUrl(item.foto_url),
+          nome_falecido: item.nome_falecido || null,
+        }));
+        setNews(newsData);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar notícias:', error);
+    } finally {
+      setLoadingNews(false);
+    }
+  };
+
+  const mapCategory = (tipo) => {
+    const m = { aviso: 'Aviso', circular: 'Circular', convocatoria: 'Convocação', informacao: 'Informação', urgente: 'Urgente' };
+    return m[tipo] || tipo;
+  };
+
+  const getCategoryStyle = (tipo) => {
+    const m = { aviso: 'bg-orange-100 text-orange-700', circular: 'bg-blue-100 text-blue-700', convocatoria: 'bg-purple-100 text-purple-700', informacao: 'bg-blue-100 text-blue-700', urgente: 'bg-red-100 text-red-600' };
+    return m[tipo] || 'bg-yellow-100 text-yellow-700';
+  };
+
+  const getBarColor = (tipo) => {
+    const m = { urgente: 'bg-red-500', informacao: 'bg-blue-500', circular: 'bg-blue-500', aviso: 'bg-orange-400', convocatoria: 'bg-purple-500' };
+    return m[tipo] || 'bg-yellow-400';
+  };
+
+  const formatDate = (d) => {
+    if (!d) return 'N/A';
+    try {
+      const date = new Date(d);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return 'N/A'; }
+  };
+
+  const toggleLike = (e, id) => {
+    e.stopPropagation();
+    const isLiked = likedIds.includes(id);
+    const newLiked = isLiked ? likedIds.filter(x => x !== id) : [...likedIds, id];
+    const newCounts = { ...likeCounts, [id]: Math.max(0, (likeCounts[id] || 0) + (isLiked ? -1 : 1)) };
+    setLikedIds(newLiked);
+    setLikeCounts(newCounts);
+    localStorage.setItem('sf_liked_news', JSON.stringify(newLiked));
+    localStorage.setItem('sf_like_counts', JSON.stringify(newCounts));
+  };
+
+  return (
+    <section id="news" className="py-24 bg-white dark:bg-[#0d1117]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold px-4 py-1.5 rounded-full mb-3 tracking-widest uppercase">
+              <Bell size={12} /> Últimas Notícias
             </div>
-            <h3 className="font-bold text-[#0f1f42] text-base mb-2">{f.title}</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-[#0f1f42] dark:text-white">Mantenha-se Informado</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-md">Acompanhe os comunicados e eventos do sindicato.</p>
           </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
-
-// ─── BENEFITS ───────────────────────────────────────────────────────────────
-const benefits = [
-  'Acesso em qualquer dispositivo',
-  'Dados seguros e encriptados',
-  'Relatórios em tempo real',
-  'Exportação PDF e impressão',
-  'Gestão de múltiplos perfis',
-  'Suporte a QR Code dinâmico',
-  'Histórico completo de quotas',
-  'Interface simples e intuitiva',
-];
-
-const BenefitsSection = ({ configs }) => (
-  <section id="about" className="bg-white py-24">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-
-        {/* Left: text + checklist */}
-        <div>
-          <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-bold px-4 py-1.5 rounded-full mb-4 tracking-widest uppercase">
-            <Award size={12} /> Vantagens
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-[#0f1f42] mb-4 leading-tight">
-            Gestão sindical moderna e eficiente
-          </h2>
-          <p className="text-gray-500 mb-8 leading-relaxed">
-            O {configs?.sigla || 'SF-DGCI'} foi desenvolvido especificamente para as necessidades do sindicato dos
-            funcionários da Direção Geral das Contribuições e Impostos da Guiné-Bissau,
-            garantindo conformidade e eficiência administrativa.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {benefits.map((b, i) => (
-              <div key={i} className="flex items-center gap-2.5">
-                <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
-                <span className="text-sm text-gray-700 font-medium">{b}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-8">
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 bg-[#1a2f5e] text-white font-bold text-sm px-6 py-3 rounded-xl hover:bg-[#0f1f42] transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              Começar agora <ArrowRight size={16} />
-            </Link>
-          </div>
+          <Link to="/noticias" className="inline-flex items-center gap-2 text-[#1a2f5e] font-bold text-sm hover:text-yellow-600 transition-colors whitespace-nowrap">
+            Ver todas <ArrowRight size={16} />
+          </Link>
         </div>
 
-        {/* Right: Actual system card replica */}
-        <div className="flex justify-center">
-          <div className="relative">
-            {/* Floating badge top-right */}
-            <div className="absolute -top-3 -right-3 z-10 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg flex items-center gap-1">
-              ✓ Digital
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {loadingNews ? (
+            <div className="col-span-full text-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1a2f5e] mx-auto" />
+              <p className="text-gray-500 mt-3 text-sm">A carregar notícias...</p>
             </div>
-            {/* Floating badge bottom-left */}
-            <div className="absolute -bottom-3 -left-3 z-10 bg-yellow-400 text-[#0f1f42] text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg">
-              QR Code
-            </div>
-
-            {/* ── Actual Card (front face replica) ── */}
+          ) : news.length > 0 ? news.map((item) => (
             <div
-              className="w-[340px] rounded-2xl overflow-hidden shadow-2xl border border-white/10"
-              style={{ background: 'linear-gradient(135deg, #f7faff 0%, #edf4ff 100%)' }}
+              key={item.id}
+              onClick={() => setSelectedNews(item)}
+              className="group bg-white dark:bg-[#161b27] border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col"
             >
-              {/* Navy header */}
-              <div
-                className="flex items-center gap-3 px-4 py-3"
-                style={{ background: '#0b1f4e' }}
-              >
-                <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow">
-                  <img src={logo} alt="Logo" className="w-9 h-9 object-contain" />
-                </div>
-                <div>
-                  <p className="text-white text-[9px] font-black tracking-widest uppercase leading-tight">
-                    {configs?.nome_sindicato ? configs.nome_sindicato.split(' - ')[0] : 'Sindicato dos Funcionários da'}
-                  </p>
-                  <p className="text-white text-[9px] font-black tracking-widest uppercase leading-tight">
-                    {configs?.nome_sindicato && configs.nome_sindicato.includes(' - ') ? configs.nome_sindicato.split(' - ')[1] : 'Direção-Geral das Contribuições e Impostos'}
-                  </p>
-                </div>
-              </div>
-
-              {/* "CARTÃO DE MEMBRO" title */}
-              <div className="text-center py-2">
-                <p className="text-[10px] font-black tracking-[0.25em] uppercase text-[#0b1f4e]">
-                  Cartão de Membro
-                </p>
-              </div>
-
-              {/* Body: photo + info grid */}
-              <div className="flex gap-3 px-4 pb-3">
-                {/* Photo */}
-                <div
-                  className="w-[72px] h-[92px] rounded-xl flex-shrink-0 flex items-center justify-center border border-[#cfd9ee]"
-                  style={{ background: '#f3f6ff' }}
-                >
-                  <Users size={26} className="text-[#1a2f5e]/30" />
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 space-y-1.5 pt-1">
-                  {[
-                    { label: 'Nome', wide: true, gold: false },
-                    { label: 'Função', wide: false, gold: false },
-                    { label: 'Serviço', wide: false, gold: false },
-                    { label: 'Fundo Social', wide: false, gold: false },
-                    { label: 'Validade', wide: false, gold: false },
-                  ].map((f) => (
-                    <div key={f.label}>
-                      <p className="text-[8px] font-bold uppercase tracking-widest text-[#1f3f7e]">{f.label}</p>
-                      <div
-                        className={`h-2.5 rounded mt-0.5 ${f.wide ? 'w-28' : 'w-20'}`}
-                        style={{ background: '#cbd5e1' }}
-                      />
+              <div className={`h-1.5 w-full ${getBarColor(item.tipo)}`} />
+              {/* Imagem de capa ou placeholder */}
+              {item.foto_url ? (
+                <div className="relative w-full h-36 overflow-hidden bg-gray-100">
+                  <img
+                    src={item.foto_url}
+                    alt={item.nome_falecido || item.title}
+                    className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
+                      item.tipo === 'obito' ? 'filter grayscale' : ''
+                    }`}
+                    onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+                  />
+                  {item.tipo === 'obito' && item.nome_falecido && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent flex items-end p-3">
+                      <p className="text-white text-xs font-semibold italic">Em memória de: {item.nome_falecido}</p>
                     </div>
-                  ))}
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-[#1a2f5e]/4 to-yellow-400/4 h-20 flex items-center justify-center border-b border-gray-100/30 dark:border-slate-800/30">
+                  <div className="p-2 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-gray-100/50 dark:border-slate-700 group-hover:scale-105 transition-transform duration-300">
+                    <Tag size={18} className="text-[#1a2f5e]/40 dark:text-blue-400/60" />
+                  </div>
+                </div>
+              )}
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`inline-block px-2 py-0.5 text-[9px] font-extrabold tracking-wide rounded-md ${getCategoryStyle(item.tipo)}`}>{item.category}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1"><Calendar size={10} />{formatDate(item.date)}</span>
+                </div>
+                <h3 className="text-sm font-bold text-[#0f1f42] dark:text-white mb-2 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors line-clamp-2 leading-snug">{item.title}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-xs mb-4 line-clamp-2 flex-1 leading-relaxed">{item.excerpt}</p>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-slate-800">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate mr-2">{item.author}</span>
+                  <button
+                    onClick={(e) => toggleLike(e, item.id)}
+                    className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all duration-200 ${likedIds.includes(item.id) ? 'bg-red-50 dark:bg-red-900/30 text-red-500' : 'text-gray-400 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+                  >
+                    <Heart size={13} className={likedIds.includes(item.id) ? 'fill-red-500 text-red-500' : ''} />
+                    {likeCounts[item.id] || 0}
+                  </button>
                 </div>
               </div>
+            </div>
+          )) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-400 text-sm">Nenhuma notícia disponível no momento.</p>
+            </div>
+          )}
+        </div>
 
-              {/* Navy footer with member number */}
-              <div
-                className="flex items-center px-4 py-2.5"
-                style={{ background: '#0b1f4e' }}
-              >
-                <span className="text-[9px] font-semibold text-white/70 uppercase tracking-widest mr-2">
-                  Nº de Membro:
-                </span>
-                <span className="text-sm font-black text-white tracking-widest">
-                  SF-0042
-                </span>
+        {selectedNews && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedNews(null)}>
+            <div className="bg-white dark:bg-[#161b27] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className={`h-2 w-full rounded-t-2xl ${getBarColor(selectedNews.tipo)}`} />
+              <div className="sticky top-0 bg-gradient-to-r from-[#1a2f5e] to-[#0f1f42] p-6 text-white flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full mb-2 ${getCategoryStyle(selectedNews.tipo)}`}>{selectedNews.category}</span>
+                  <h2 className="text-xl font-black leading-tight">{selectedNews.title}</h2>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-slate-300">
+                    <span className="flex items-center gap-1"><Calendar size={11} />{formatDate(selectedNews.date)}</span>
+                    <span>•</span><span>{selectedNews.author}</span>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedNews(null)} className="text-white/60 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors flex-shrink-0 text-lg">✕</button>
+              </div>
+
+              {/* Imagem de destaque no modal */}
+              {selectedNews.foto_url && (
+                <div className="relative w-full overflow-hidden bg-gray-100 dark:bg-slate-800">
+                  <img
+                    src={selectedNews.foto_url}
+                    alt={selectedNews.nome_falecido || selectedNews.title}
+                    className={`w-full max-h-72 object-cover ${selectedNews.tipo === 'obito' ? 'filter grayscale' : ''}`}
+                    onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+                  />
+                  {selectedNews.tipo === 'obito' && selectedNews.nome_falecido && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent flex items-end p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-sm font-semibold italic">
+                          Em memória de: <strong>{selectedNews.nome_falecido}</strong>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="p-6">
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed text-sm">{selectedNews.content}</p>
+              </div>
+              <div className="sticky bottom-0 bg-gray-50 dark:bg-[#0d1117] p-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between rounded-b-2xl">
+                <button
+                  onClick={(e) => toggleLike(e, selectedNews.id)}
+                  className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full transition-all duration-200 ${likedIds.includes(selectedNews.id) ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500'}`}
+                >
+                  <Heart size={15} className={likedIds.includes(selectedNews.id) ? 'fill-red-500 text-red-500' : ''} />
+                  {likedIds.includes(selectedNews.id) ? 'Curtido' : 'Curtir'} · {likeCounts[selectedNews.id] || 0}
+                </button>
+                <button onClick={() => setSelectedNews(null)} className="bg-[#1a2f5e] hover:bg-[#0f1f42] text-white font-bold py-2 px-5 rounded-lg transition-all text-sm">Fechar</button>
               </div>
             </div>
           </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+// ─── DOCUMENTS SECTION ──────────────────────────────────────────────────────
+const DocumentsSection = () => {
+  const [latestDocuments, setLatestDocuments] = useState([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+
+  useEffect(() => {
+    fetchLatestDocuments();
+  }, []);
+
+  const categoryDisplayMap = {
+    'geral': 'Geral',
+    'ata': 'Ata de Reunião',
+    'estatuto': 'Estatuto',
+    'contrato': 'Contrato',
+    'circular': 'Circular',
+    'relatorio': 'Relatório',
+    'declaracao': 'Declaração',
+    'outro': 'Outro',
+  };
+
+  const fetchLatestDocuments = async () => {
+    try {
+      const response = await api.get('/documentos/publicos');
+      if (response.data.success && response.data.data) {
+        const docs = response.data.data
+          .map(doc => ({
+            id: doc.id,
+            name: doc.titulo,
+            ficheiro_nome: doc.ficheiro_nome,
+            category: categoryDisplayMap[doc.tipo] || doc.tipo,
+            type: doc.ficheiro_nome?.split('.').pop()?.toLowerCase() || 'file',
+            size: formatFileSize(doc.ficheiro_tamanho),
+            uploadDate: doc.criado_em || new Date().toISOString(),
+            description: doc.titulo,
+            url: doc.ficheiro_url,
+          }))
+          .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
+          .slice(0, 3);
+        setLatestDocuments(docs);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar documentos:', error);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return 'N/A';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        const cleaned = String(dateString).replace(/\+\d{2}$/, ':00');
+        const date2 = new Date(cleaned);
+        if (isNaN(date2.getTime())) return 'N/A';
+        return date2.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+      return date.toLocaleDateString('pt-PT', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
+  const getFileIcon = (type) => {
+    switch (type) {
+      case 'pdf':
+        return <FileText className="size-6 text-red-500" />;
+      case 'xlsx':
+      case 'xls':
+        return <FileText className="size-6 text-green-600" />;
+      case 'docx':
+      case 'doc':
+        return <FileText className="size-6 text-blue-500" />;
+      default:
+        return <FileText className="size-6 text-gray-500" />;
+    }
+  };
+
+  return (
+    <section id="documents" className="py-24 bg-gradient-to-b from-gray-50 dark:from-[#161b27] to-white dark:to-[#0d1117]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold px-4 py-1.5 rounded-full mb-3 tracking-widest uppercase">
+              <Download size={12} /> Biblioteca Digital
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-[#0f1f42] dark:text-white">Documentos Recentes</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-md">Aceda rapidamente aos estatutos, atas e circulares oficiais do sindicato.</p>
+          </div>
+          <Link to="/documentos-publicos" className="inline-flex items-center gap-2 text-[#1a2f5e] font-bold text-sm hover:text-yellow-600 transition-colors whitespace-nowrap">
+            Ver todos <ArrowRight size={16} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {loadingDocs ? (
+            <div className="col-span-full text-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1a2f5e] mx-auto" />
+              <p className="text-gray-500 mt-3 text-sm">A carregar documentos...</p>
+            </div>
+          ) : latestDocuments.length > 0 ? (
+            latestDocuments.map((doc) => (
+              <div
+                key={doc.id}
+                className="group bg-white dark:bg-[#161b27] border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
+              >
+                <div className="bg-gradient-to-br from-[#1a2f5e]/8 to-yellow-400/8 p-6 flex items-start justify-between">
+                  <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100/50 dark:border-slate-700">
+                    {getFileIcon(doc.type)}
+                  </div>
+                  <span className="inline-block px-2.5 py-1 bg-yellow-400/10 text-yellow-800 text-[10px] font-bold rounded-full">
+                    {doc.category}
+                  </span>
+                </div>
+
+                <div className="p-5 flex-1 flex flex-col">
+                  <h3 className="text-sm font-bold text-[#0f1f42] dark:text-white mb-1 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors line-clamp-2 leading-snug">
+                    {doc.name}
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs mb-4 line-clamp-2 flex-1 leading-relaxed">
+                    {doc.description || 'Sem descrição adicional.'}
+                  </p>
+
+                  <div className="space-y-2 text-[11px] text-gray-400 dark:text-gray-500 mb-4 pt-3 border-t border-gray-100 dark:border-slate-800">
+                    <div className="flex justify-between">
+                      <span>Tamanho: <strong className="text-gray-600 dark:text-gray-300">{doc.size}</strong></span>
+                      <span>Tipo: <strong className="text-gray-600 dark:text-gray-300 uppercase">{doc.type}</strong></span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={11} />
+                      <span>Publicado em: <strong className="text-gray-600">{formatDate(doc.uploadDate)}</strong></span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <a
+                      href={doc.url || '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-xs shadow-sm hover:shadow-yellow-500/20"
+                    >
+                      <FileText size={13} />
+                      Ler
+                    </a>
+                    <a
+                      href={doc.url || '#'}
+                      download={doc.ficheiro_nome || doc.name}
+                      className="flex-1 bg-[#1a2f5e] hover:bg-[#0f1f42] text-white font-bold py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-xs shadow-sm hover:shadow-[#1a2f5e]/20"
+                    >
+                      <Download size={13} />
+                      Baixar
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-400 text-sm">Nenhum documento disponível no momento.</p>
+            </div>
+          )}
+        </div>
+
+        {/* CTA to all documents */}
+        <div className="text-center">
+          <Link
+            to="/documentos-publicos"
+            className="inline-flex items-center gap-2 bg-[#1a2f5e]/10 border border-[#1a2f5e]/20 text-[#1a2f5e] font-bold text-sm px-6 py-3 rounded-xl hover:bg-[#1a2f5e] hover:text-white transition-all duration-200"
+          >
+            Ver Todos os Documentos <ArrowRight size={16} />
+          </Link>
         </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 // ─── CTA SECTION ────────────────────────────────────────────────────────────
 const CTASection = () => (
@@ -494,11 +639,11 @@ const Footer = ({ configs }) => (
           <h4 className="text-white font-bold text-sm mb-5 uppercase tracking-wider">Acesso Rápido</h4>
           <div className="space-y-2.5">
             {[
+              { label: 'O Sindicato', to: '/sindicato' },
+              { label: 'Notícias', to: '/noticias' },
+              { label: 'Documentos Públicos', to: '/documentos-publicos' },
               { label: 'Entrar no Sistema', to: '/login' },
-              { label: 'Gestão de Membros', to: '/login' },
               { label: 'Controlo Financeiro', to: '/login' },
-              { label: 'Documentos', to: '/login' },
-              { label: 'Comunicados', to: '/login' },
             ].map((l) => (
               <div key={l.label}>
                 <Link
@@ -540,7 +685,7 @@ const LandingPage = () => {
   });
 
   useEffect(() => {
-    axios.get('/api/configuracoes/public')
+    api.get('/configuracoes/public')
       .then(res => {
         if (res.data && res.data.success) {
           setConfigs(prev => ({ ...prev, ...res.data.data }));
@@ -550,11 +695,12 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div className="font-sans antialiased">
-      <Navbar configs={configs} />
+    <div className="font-sans antialiased bg-white dark:bg-[#0d1117] text-slate-800 dark:text-[#e6edf4] transition-colors duration-200">
+      <PublicNavbar />
+
       <Hero configs={configs} />
-      <FeaturesSection />
-      <BenefitsSection configs={configs} />
+      <NewsSection />
+      <DocumentsSection />
       <CTASection />
       <Footer configs={configs} />
     </div>

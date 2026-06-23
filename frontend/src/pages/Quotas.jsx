@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
-import { CreditCard, Search, Filter, XCircle } from 'lucide-react';
+import { CreditCard, Search, Filter, XCircle, Plus, CheckSquare, Square, Check, X, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import MemberSearchInput from '../components/MemberSearchInput';
+import PageHeader from '../components/PageHeader';
 
 const Quotas = () => {
   const [quotas, setQuotas] = useState([]);
@@ -10,6 +12,11 @@ const Quotas = () => {
   const [ano, setAno] = useState(new Date().getFullYear());
   const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0 });
+  const [bancos, setBancos] = useState([]);
+
+  // Seleção em lote
+  const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+  const [showBatchModal, setShowBatchModal] = useState(false);
 
   const fetchQuotas = async () => {
     setLoading(true);
@@ -26,8 +33,20 @@ const Quotas = () => {
     }
   };
 
+  const fetchBancos = async () => {
+    try {
+      const res = await api.get('/financeiro/bancos');
+      if (res.data.success) {
+        setBancos(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar bancos:', err);
+    }
+  };
+
   useEffect(() => {
     fetchQuotas();
+    fetchBancos();
   }, [ano, pagination.page]);
 
   useEffect(() => {
@@ -37,6 +56,25 @@ const Quotas = () => {
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [search]);
+
+  // Limpar seleção quando a lista mudar
+  useEffect(() => {
+    setSelectedMemberIds([]);
+  }, [quotas]);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedMemberIds(quotas.map(m => m.id));
+    } else {
+      setSelectedMemberIds([]);
+    }
+  };
+
+  const handleSelectMember = (id) => {
+    setSelectedMemberIds(prev =>
+      prev.includes(id) ? prev.filter(mid => mid !== id) : [...prev, id]
+    );
+  };
 
   const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
@@ -77,10 +115,22 @@ const Quotas = () => {
     ano: new Date().getFullYear(),
     valor: '1000',
     metodo_pagamento: 'dinheiro',
+    banco_id: '',
     referencia: '',
     observacoes: ''
   });
+
+  const [batchFormData, setBatchFormData] = useState({
+    mes: new Date().getMonth() + 1,
+    ano: new Date().getFullYear(),
+    metodo_pagamento: 'dinheiro',
+    banco_id: '',
+    referencia: '',
+    observacoes: ''
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBatchSubmitting, setIsBatchSubmitting] = useState(false);
 
   useEffect(() => {
     let val = 0;
@@ -92,7 +142,6 @@ const Quotas = () => {
   const handlePagamento = async (e) => {
     e.preventDefault();
 
-    // Validações
     if (!formData.membro_id) {
       toast.error('Selecione um membro');
       return;
@@ -128,14 +177,12 @@ const Quotas = () => {
         ano: parseInt(formData.ano),
         valor: valor,
         metodo_pagamento: formData.metodo_pagamento,
+        banco_id: formData.banco_id ? parseInt(formData.banco_id) : null,
         referencia: formData.referencia || null,
         observacoes: formData.observacoes || null
       };
 
-      console.log('Enviando pagamento:', dataToSend);
-      const response = await api.post('/pagamentos', dataToSend);
-      console.log('Resposta:', response.data);
-
+      await api.post('/pagamentos', dataToSend);
       toast.success('Pagamento registado com sucesso!');
       setShowModal(false);
       setSelectedMember(null);
@@ -147,13 +194,12 @@ const Quotas = () => {
         ano: new Date().getFullYear(),
         valor: '1000',
         metodo_pagamento: 'dinheiro',
+        banco_id: '',
         referencia: '',
         observacoes: ''
       });
       fetchQuotas();
     } catch (error) {
-      console.error('Erro completo:', error);
-      console.error('Response data:', error.response?.data);
       const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || 'Erro desconhecido';
       toast.error(errorMsg);
     } finally {
@@ -161,35 +207,70 @@ const Quotas = () => {
     }
   };
 
+  const handleBatchPagamento = async (e) => {
+    e.preventDefault();
+    if (selectedMemberIds.length === 0) {
+      toast.error('Nenhum membro selecionado.');
+      return;
+    }
+
+    setIsBatchSubmitting(true);
+    try {
+      const res = await api.post('/pagamentos/lote', {
+        membro_ids: selectedMemberIds,
+        mes: parseInt(batchFormData.mes),
+        ano: parseInt(batchFormData.ano),
+        metodo_pagamento: batchFormData.metodo_pagamento,
+        banco_id: batchFormData.banco_id ? parseInt(batchFormData.banco_id) : null,
+        referencia: batchFormData.referencia || null,
+        observacoes: batchFormData.observacoes || null
+      });
+
+      if (res.data.success) {
+        toast.success(res.data.message || 'Pagamento em massa registado!');
+        setSelectedMemberIds([]);
+        setShowBatchModal(false);
+        fetchQuotas();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Erro ao processar pagamentos em lote.');
+    } finally {
+      setIsBatchSubmitting(false);
+    }
+  };
+
   return (
-    <div className="fade-in space-y-6 relative">
-      <div className="page-title">
-        <span />
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CreditCard size={28} className="text-blue-600" />
-            Quota e Fundo Social
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">Lista de membros com estado mensal de quota e fundo social, meses pagos, meses em dívida e total de pagamento.</p>
-        </div>
-      </div>
-      <div className="flex gap-2">
+    <div className="space-y-6 fade-in">
+      <PageHeader
+        icon={CreditCard}
+        title="Quota e Fundo Social"
+        subtitle="Estado mensal de quota e fundo social — meses pagos, em dívida e total"
+        actions={
+          <div className="flex gap-2">
+            <button onClick={() => setShowModal(true)} className="btn btn-primary flex items-center gap-2">
+              <Plus size={16} /> Registar Pagamento
+            </button>
+          </div>
+        }
+      />
+      <div
+        className="flex gap-2"
+        style={{ animation: 'fadeUp 0.35s ease-out 0.1s both' }}
+      >
         <select
           value={ano}
           onChange={(e) => setAno(Number(e.target.value))}
-          className="form-control font-semibold bg-white"
+          className="form-control font-semibold"
+          style={{ maxWidth: '160px' }}
         >
           {[...Array(5)].map((_, i) => {
             const year = new Date().getFullYear() - i;
             return <option key={year} value={year}>Ano {year}</option>;
           })}
         </select>
-        <button onClick={() => setShowModal(true)} className="btn btn-primary">
-          Registar Pagamento
-        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
         <div className="card p-4" style={{ background: 'var(--success-bg)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
           <div className="text-sm text-green-700 uppercase font-semibold tracking-wide">Total Pago (Quota + Fundo)</div>
           <div className="mt-3 text-3xl font-bold text-green-900">{new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF' }).format(totalPagas)}</div>
@@ -206,6 +287,33 @@ const Quotas = () => {
           <div className="mt-2 text-sm text-yellow-700">Membros com valores em atraso</div>
         </div>
       </div>
+
+      {/* Barra de Ações em Lote */}
+      {selectedMemberIds.length > 0 && (
+        <div className="card border-blue-500/30 bg-blue-500/5 p-4 flex items-center justify-between gap-4 fade-in">
+          <div className="flex items-center gap-2">
+            <CheckSquare className="text-blue-500" size={20} />
+            <span className="text-sm font-bold text-blue-400">
+              {selectedMemberIds.length} membros selecionados para registo em massa
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedMemberIds([])}
+              className="btn btn-secondary text-xs py-1.5"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => setShowBatchModal(true)}
+              className="btn btn-primary text-xs py-1.5 flex items-center gap-1.5"
+            >
+              <CreditCard size={14} />
+              Registar Pagamento em Massa
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -238,11 +346,20 @@ const Quotas = () => {
         <p className="text-xs text-gray-500 mb-4">
           Meses anteriores à data de admissão do membro não contam. Meses do futuro também ficam em branco; somente meses vencidos após a admissão são marcados como pago ou em dívida.
         </p>
+
         <div className="table-container overflow-x-auto">
           <table className="table min-w-[1200px]">
             <thead>
               <tr>
-                <th className="sticky left-0 bg-gray-50 z-10 w-64 border-r">Membro</th>
+                <th className="sticky left-0 bg-gray-50 z-20 w-12 text-center border-r">
+                  <input
+                    type="checkbox"
+                    checked={selectedMemberIds.length === quotas.length && quotas.length > 0}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="sticky left-12 bg-gray-50 z-10 w-64 border-r">Membro</th>
                 {meses.map((mes) => (
                   <th key={mes} className="text-center w-16">{mes}</th>
                 ))}
@@ -253,13 +370,21 @@ const Quotas = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={16} className="text-center py-8"><div className="spinner mx-auto"></div></td></tr>
+                <tr><td colSpan={17} className="text-center py-8"><div className="spinner mx-auto"></div></td></tr>
               ) : members.length === 0 ? (
-                <tr><td colSpan={16} className="text-center py-8 text-gray-500">Nenhum membro encontrado.</td></tr>
+                <tr><td colSpan={17} className="text-center py-8 text-gray-500">Nenhum membro encontrado.</td></tr>
               ) : (
                 members.map(m => (
                   <tr key={m.id} className="hover:bg-gray-50">
-                    <td className="sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-r py-3">
+                    <td className="sticky left-0 bg-white z-20 text-center border-r py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedMemberIds.includes(m.id)}
+                        onChange={() => handleSelectMember(m.id)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="sticky left-12 bg-white group-hover:bg-gray-50 z-10 border-r py-3">
                       <div className="font-semibold text-gray-900 truncate">{m.nome_completo}</div>
                       <div className="text-xs text-gray-500">{m.numero_membro}</div>
                     </td>
@@ -294,7 +419,8 @@ const Quotas = () => {
         </div>
       </div>
 
-      {showModal && (
+      {/* Modal Pagamento Individual */}
+      {showModal && createPortal(
         <div className="modal-backdrop">
           <div className="modal-card max-w-md">
             <div className="modal-header">
@@ -409,6 +535,18 @@ const Quotas = () => {
                 </div>
 
                 <div className="form-group">
+                  <label className="form-label">Conta Bancária de Entrada</label>
+                  <div className="form-control-select-wrapper">
+                    <select className="form-control" value={formData.banco_id} onChange={e => setFormData({ ...formData, banco_id: e.target.value })}>
+                      <option value="">Selecione um banco (opcional)</option>
+                      {bancos.map(b => (
+                        <option key={b.id} value={b.id}>{b.nome} - {b.numero_conta} ({new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF' }).format(b.saldo_atual)})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
                   <label className="form-label">Referência (opcional)</label>
                   <input
                     type="text"
@@ -439,7 +577,112 @@ const Quotas = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal Pagamento em Massa (Lote) */}
+      {showBatchModal && createPortal(
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-md">
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <CreditCard size={18} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Pagamento em Massa</h3>
+                  <p className="text-xs text-slate-500">Registar quotas/fundo para {selectedMemberIds.length} membros</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBatchModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                <strong>Nota:</strong> O valor será calculado automaticamente por membro.
+                Membros com <strong>Fundo Social</strong> ativo pagarão <strong>5.000 XOF</strong> (1.000 quota + 4.000 fundo).
+                Os restantes pagarão <strong>1.000 XOF</strong> (apenas quota).
+              </div>
+
+              <form id="form-pagamento-lote" onSubmit={handleBatchPagamento} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label">Mês</label>
+                    <div className="form-control-select-wrapper">
+                      <select required className="form-control" value={batchFormData.mes} onChange={e => setBatchFormData({ ...batchFormData, mes: Number(e.target.value) })}>
+                        {meses.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Ano</label>
+                    <input type="number" required className="form-control" value={batchFormData.ano} onChange={e => setBatchFormData({ ...batchFormData, ano: Number(e.target.value) })} />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Método de Pagamento</label>
+                  <div className="form-control-select-wrapper">
+                    <select className="form-control" value={batchFormData.metodo_pagamento} onChange={e => setBatchFormData({ ...batchFormData, metodo_pagamento: e.target.value })}>
+                      <option value="dinheiro">Dinheiro</option>
+                      <option value="transferencia">Transferência Bancária</option>
+                      <option value="cheque">Cheque</option>
+                      <option value="desconto_vencimento">Desconto no Vencimento</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Conta Bancária de Entrada</label>
+                  <div className="form-control-select-wrapper">
+                    <select className="form-control" value={batchFormData.banco_id} onChange={e => setBatchFormData({ ...batchFormData, banco_id: e.target.value })}>
+                      <option value="">Selecione um banco (opcional)</option>
+                      {bancos.map(b => (
+                        <option key={b.id} value={b.id}>{b.nome} - {b.numero_conta} ({new Intl.NumberFormat('pt-GW', { style: 'currency', currency: 'XOF' }).format(b.saldo_atual)})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Referência (opcional)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Nº de transferência ou cheque"
+                    value={batchFormData.referencia}
+                    onChange={e => setBatchFormData({ ...batchFormData, referencia: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Observações (opcional)</label>
+                  <textarea
+                    className="form-control"
+                    placeholder="Notas comuns sobre estes pagamentos"
+                    rows={2}
+                    value={batchFormData.observacoes}
+                    onChange={e => setBatchFormData({ ...batchFormData, observacoes: e.target.value })}
+                  />
+                </div>
+              </form>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" onClick={() => setShowBatchModal(false)} className="btn btn-outline">Cancelar</button>
+              <button type="submit" form="form-pagamento-lote" disabled={isBatchSubmitting} className="btn btn-primary">
+                {isBatchSubmitting ? 'A processar lote...' : `Processar ${selectedMemberIds.length} Pagamentos`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

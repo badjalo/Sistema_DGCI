@@ -71,11 +71,15 @@ const login = async (req, res, next) => {
       [user.id, user.nome, 'LOGIN_SUCESSO', 'auth', req.ip, 200]
     ).catch(() => { });
 
+    const cookieSameSite = process.env.COOKIE_SAMESITE || 'Strict';
+    const isSameSiteNone = cookieSameSite.toLowerCase() === 'none';
+    const cookieSecure = isSameSiteNone || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
+
     // ✅ SEGURANÇA: Enviar token em httpOnly cookie (protege contra XSS)
     res.cookie('authToken', token, {
       httpOnly: true,      // Não acessível via JavaScript
-      secure: process.env.NODE_ENV === 'production',  // HTTPS only em produção
-      sameSite: 'Strict',  // Protege contra CSRF
+      secure: cookieSecure,  // HTTPS only
+      sameSite: isSameSiteNone ? 'none' : cookieSameSite,
       maxAge: 24 * 60 * 60 * 1000,  // 24 horas
       path: '/'
     });
@@ -106,8 +110,16 @@ const logout = async (req, res, next) => {
       [req.user.id, req.user.nome]
     );
 
+    const cookieSameSite = process.env.COOKIE_SAMESITE || 'Strict';
+    const isSameSiteNone = cookieSameSite.toLowerCase() === 'none';
+    const cookieSecure = isSameSiteNone || process.env.COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production';
+
     // ✅ Limpar cookie httpOnly
-    res.clearCookie('authToken', { path: '/' });
+    res.clearCookie('authToken', { 
+      path: '/',
+      secure: cookieSecure,
+      sameSite: isSameSiteNone ? 'none' : cookieSameSite
+    });
 
     res.json({ success: true, message: 'Sessão terminada com sucesso' });
   } catch (err) {
@@ -171,4 +183,147 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { login, logout, me, changePassword };
+/** POST /api/auth/recuperar-senha  (pública — sem autenticação) */
+const recuperarSenha = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email é obrigatório.' });
+
+    const cleanEmail = sanitizeEmail(email);
+    const result = await query('SELECT id, nome, ativo FROM utilizadores WHERE email = $1', [cleanEmail]);
+
+    // Resposta genérica mesmo que o email não exista (evita enumeração)
+    if (!result.rows.length || !result.rows[0].ativo) {
+      return res.json({ success: true, message: 'Se o email existir, o administrador será notificado.' });
+    }
+
+    const user = result.rows[0];
+
+    // Gerar token seguro de 6 dígitos e expiração de 2 horas
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiracao = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2h
+
+    // Garantir que a coluna existe (cria-a se necessário)
+    await query(`
+      ALTER TABLE utilizadores 
+      ADD COLUMN IF NOT EXISTS reset_token VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS reset_token_expira TIMESTAMPTZ
+    `).catch(() => {}); // Ignorar se já existe
+
+    // Guardar token no utilizador
+    await query(
+      'UPDATE utilizadores SET reset_token = $1, reset_token_expira = $2 WHERE id = $3',
+      [token, expiracao, user.id]
+    );
+
+    // Notificar todos os administradores
+    const admins = await query(
+      "SELECT id FROM utilizadores WHERE perfil = 'administrador' AND ativo = true"
+    );
+    for (const admin of admins.rows) {
+      await query(
+        `INSERT INTO notificacoes (utilizador_id, titulo, mensagem, tipo, lida, link)
+         VALUES ($1, $2, $3, $4, false, $5)`,
+        [
+          admin.id,
+          'Pedido de Recuperação de Senha',
+          `O utilizador "${user.nome}" (${cleanEmail}) solicitou recuperação da senha. Código temporário: ${token} (válido 2h). Aceda a Configurações → Utilizadores para redefinir.`,
+          'sistema',
+          '/configuracoes'
+        ]
+      );
+    }
+
+    await query(
+      `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade, ip_address)
+       VALUES ($1, $2, 'RECUPERAR_SENHA', 'utilizadores', $3)`,
+      [user.id, user.nome, req.ip]
+    ).catch(() => {});
+
+    res.json({ success: true, message: 'Se o email existir, o administrador será notificado.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** POST /api/auth/redefinir-senha  (pública — usa token temporário) */
+const redefinirSenha = async (req, res, next) => {
+  try {
+    const { email, token, nova_senha } = req.body;
+    if (!email || !token || !nova_senha) {
+      return res.status(400).json({ error: 'Email, código e nova senha são obrigatórios.' });
+    }
+    if (nova_senha.length < 8) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 8 caracteres.' });
+    }
+
+    const cleanEmail = sanitizeEmail(email);
+    const result = await query(
+      'SELECT id, nome, reset_token, reset_token_expira FROM utilizadores WHERE email = $1',
+      [cleanEmail]
+    );
+
+    if (!result.rows.length) {
+      return res.status(400).json({ error: 'Código inválido ou expirado.' });
+    }
+
+    const user = result.rows[0];
+    if (user.reset_token !== token) {
+      return res.status(400).json({ error: 'Código inválido ou expirado.' });
+    }
+    if (!user.reset_token_expira || new Date(user.reset_token_expira) < new Date()) {
+      return res.status(400).json({ error: 'O código expirou. Solicite um novo.' });
+    }
+
+    const hash = await bcrypt.hash(nova_senha, 12);
+    await query(
+      'UPDATE utilizadores SET password_hash = $1, reset_token = NULL, reset_token_expira = NULL WHERE id = $2',
+      [hash, user.id]
+    );
+
+    await query(
+      `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade, ip_address)
+       VALUES ($1, $2, 'REDEFINIR_SENHA', 'utilizadores', $3)`,
+      [user.id, user.nome, req.ip]
+    ).catch(() => {});
+
+    res.json({ success: true, message: 'Senha redefinida com sucesso. Pode fazer login agora.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** PUT /api/auth/profile */
+const updateProfile = async (req, res, next) => {
+  try {
+    const { nome, email, avatar_url } = req.body;
+    if (!nome || !email) {
+      return res.status(400).json({ error: 'Nome e email são obrigatórios' });
+    }
+
+    const checkEmail = await query('SELECT id FROM utilizadores WHERE email = $1 AND id <> $2', [email.toLowerCase().trim(), req.user.id]);
+    if (checkEmail.rows.length) {
+      return res.status(409).json({ error: 'Este email já está a ser utilizado por outro utilizador' });
+    }
+
+    const result = await query(
+      `UPDATE utilizadores SET nome = $1, email = $2, avatar_url = $3
+       WHERE id = $4 RETURNING id, nome, email, perfil, avatar_url`,
+      [nome.trim(), email.toLowerCase().trim(), avatar_url || null, req.user.id]
+    );
+
+    await query(
+      `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade)
+       VALUES ($1, $2, 'UPDATE_PROFILE', 'utilizadores')`,
+      [req.user.id, req.user.nome]
+    ).catch(() => {});
+
+    res.json({ success: true, data: result.rows[0], message: 'Perfil atualizado com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { login, logout, me, changePassword, updateProfile, recuperarSenha, redefinirSenha };
+
+

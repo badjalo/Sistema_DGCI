@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, CreditCard, DollarSign,
   FileText, MessageSquare, BarChart3, Building,
-  Settings, LogOut, ChevronLeft, ChevronRight
+  Settings, LogOut, ChevronLeft, ChevronRight, Landmark, Inbox, ShieldCheck
 } from 'lucide-react';
-import logo from '../assets/logo.jpeg';
+import logo from '../assets/logo.png';
 
 const menuGroups = [
   {
@@ -27,15 +27,19 @@ const menuGroups = [
   {
     label: 'Organização',
     items: [
-      { path: '/departamentos', icon: Building,      label: 'Departamentos' },
-      { path: '/documentos',    icon: FileText,      label: 'Documentos' },
-      { path: '/comunicados',   icon: MessageSquare, label: 'Comunicados' },
+      { path: '/departamentos',   icon: Building,      label: 'Departamentos' },
+      { path: '/documentos',      icon: FileText,      label: 'Documentos' },
+      { path: '/comunicados',     icon: MessageSquare, label: 'Comunicados' },
+      { path: '/sindicato-admin', icon: Landmark,      label: 'O Sindicato' },
+      { path: '/mensagens',       icon: Inbox,         label: 'Mensagens' },
     ]
   },
   {
     label: 'Sistema',
     items: [
-      { path: '/configuracoes', icon: Settings, label: 'Configurações' },
+      { path: '/utilizadores', icon: Users,       label: 'Utilizadores', adminOnly: true },
+      { path: '/auditoria',    icon: ShieldCheck, label: 'Auditoria',    adminOnly: true },
+      { path: '/configuracoes', icon: Settings,   label: 'Configurações' },
     ]
   },
 ];
@@ -53,7 +57,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       {isOpen && (
         <div
           className="fixed inset-0 z-30 lg:hidden"
-          style={{ background: 'rgba(9,14,30,0.6)', backdropFilter: 'blur(4px)' }}
+          style={{
+            background: 'rgba(9,14,30,0.65)',
+            backdropFilter: 'blur(6px)',
+            animation: 'backdropIn 0.2s ease-out',
+          }}
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -61,7 +69,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       {/* Mobile toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white shadow-lg transition-transform active:scale-90"
         style={{ background: 'var(--sidebar-bg)' }}
       >
         {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
@@ -72,8 +80,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         style={{
           width: sidebarWidth,
           background: 'var(--sidebar-bg)',
-          transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.3s',
+          transition: 'width 0.28s cubic-bezier(0.4,0,0.2,1), transform 0.3s cubic-bezier(0.4,0,0.2,1)',
           flexShrink: 0,
+          borderRight: '1px solid var(--sidebar-border)',
         }}
         className={`
           fixed lg:static top-0 left-0 h-screen z-40 flex flex-col
@@ -83,16 +92,29 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {/* Brand */}
         <div
           className="flex items-center px-4 border-b"
-          style={{ borderColor: 'var(--sidebar-border)', height: '64px', gap: '12px', overflow: 'hidden' }}
+          style={{
+            borderColor: 'var(--sidebar-border)',
+            height: '64px',
+            gap: '12px',
+            overflow: 'hidden',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%)',
+          }}
         >
-          <div className="flex-shrink-0 w-9 h-9 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center">
+          <div
+            className="flex-shrink-0 w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.3)',
+              transition: 'transform 0.2s',
+            }}
+          >
             {logo
               ? <img src={logo} alt="SF-DGCI" className="w-full h-full object-contain" />
               : <span className="text-white font-bold text-sm">SF</span>
             }
           </div>
           {!collapsed && (
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0" style={{ animation: 'slideInRight 0.25s ease-out' }}>
               <p className="font-bold text-white text-sm truncate leading-tight">SF-DGCI</p>
               <p className="text-xs truncate" style={{ color: 'var(--sidebar-text)' }}>Sistema de Gestão</p>
             </div>
@@ -100,57 +122,108 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-          {menuGroups.map((group) => (
-            <div key={group.label} className="mb-2">
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          {menuGroups.map((group, gi) => (
+            <div key={group.label} className="mb-3">
               {!collapsed && (
                 <p
-                  className="px-3 mb-1 text-[10px] font-bold uppercase tracking-widest"
-                  style={{ color: 'var(--sidebar-text)', opacity: 0.5 }}
+                  className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest"
+                  style={{
+                    color: 'var(--sidebar-text)',
+                    opacity: 0.4,
+                    letterSpacing: '0.12em',
+                  }}
                 >
                   {group.label}
                 </p>
               )}
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname.startsWith(item.path);
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setIsOpen(false)}
-                    title={collapsed ? item.label : undefined}
-                    className={`
-                      relative flex items-center gap-3 px-3 py-2.5 rounded-lg
-                      transition-all duration-150 group overflow-hidden
-                      ${isActive
-                        ? 'text-white'
-                        : 'text-slate-400 hover:text-white'
-                      }
-                    `}
-                    style={{
-                      background: isActive ? 'var(--sidebar-active)' : 'transparent',
-                      ...(isActive ? { boxShadow: '0 4px 14px rgba(59,111,245,0.35)' } : {}),
-                    }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sidebar-hover)'; }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <Icon size={18} className="flex-shrink-0" />
-                    {!collapsed && (
-                      <span className="font-medium text-sm truncate">{item.label}</span>
-                    )}
-                    {/* Tooltip on collapsed */}
-                    {collapsed && (
-                      <span
-                        className="absolute left-full ml-3 px-2 py-1 text-xs font-semibold text-white rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity"
-                        style={{ background: '#1e293b', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}
-                      >
-                        {item.label}
-                      </span>
-                    )}
-                  </NavLink>
-                );
-              })}
+              <div className="space-y-0.5">
+                {group.items.map((item, ii) => {
+                  if (item.adminOnly && user?.perfil !== 'administrador') return null;
+                  const Icon = item.icon;
+                  const isActive = location.pathname.startsWith(item.path);
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsOpen(false)}
+                      title={collapsed ? item.label : undefined}
+                      className={`
+                        relative flex items-center gap-3 px-3 py-2.5 rounded-lg
+                        group overflow-hidden select-none
+                        ${isActive
+                          ? 'text-white'
+                          : 'hover:text-white'
+                        }
+                      `}
+                      style={{
+                        background: isActive
+                          ? 'linear-gradient(135deg, var(--sidebar-active), rgba(59,111,245,0.8))'
+                          : 'transparent',
+                        boxShadow: isActive ? '0 4px 16px rgba(59,111,245,0.3)' : 'none',
+                        color: isActive ? '#fff' : 'var(--sidebar-text)',
+                        transition: 'background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s',
+                        transform: 'translateX(0)',
+                      }}
+                      onMouseEnter={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'var(--sidebar-hover)';
+                          e.currentTarget.style.color = '#fff';
+                          e.currentTarget.style.transform = 'translateX(2px)';
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--sidebar-text)';
+                          e.currentTarget.style.transform = 'translateX(0)';
+                        }
+                      }}
+                    >
+                      {/* Active left bar */}
+                      {isActive && (
+                        <span
+                          className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r-full"
+                          style={{
+                            background: 'rgba(255,255,255,0.6)',
+                            animation: 'scaleIn 0.2s ease-out',
+                          }}
+                        />
+                      )}
+
+                      <Icon
+                        size={18}
+                        className="flex-shrink-0"
+                        style={{ transition: 'transform 0.2s' }}
+                      />
+                      {!collapsed && (
+                        <span className="font-medium text-sm truncate">{item.label}</span>
+                      )}
+
+                      {/* Tooltip on collapsed */}
+                      {collapsed && (
+                        <span
+                          className="absolute left-full ml-3 px-2.5 py-1.5 text-xs font-semibold text-white rounded-lg pointer-events-none whitespace-nowrap z-50"
+                          style={{
+                            background: '#1e293b',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            opacity: 0,
+                            transform: 'translateX(-4px)',
+                            transition: 'opacity 0.15s, transform 0.15s',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.opacity = '1';
+                            e.currentTarget.style.transform = 'translateX(0)';
+                          }}
+                        >
+                          {item.label}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>
@@ -158,35 +231,66 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {/* Collapse toggle (desktop only) */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex items-center justify-center mx-auto mb-2 w-8 h-8 rounded-lg transition-all hover:bg-white/10"
+          className="hidden lg:flex items-center justify-center mx-auto mb-2 w-8 h-8 rounded-lg transition-all hover:bg-white/10 active:scale-90"
           style={{ color: 'var(--sidebar-text)' }}
           title={collapsed ? 'Expandir' : 'Recolher'}
         >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          <span
+            style={{
+              display: 'inline-flex',
+              transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+              transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+            }}
+          >
+            <ChevronRight size={16} />
+          </span>
         </button>
 
         {/* User section */}
-        <div className="p-3 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
-          <div
-            className="flex items-center gap-3 p-2.5 rounded-lg mb-2"
-            style={{ background: 'var(--sidebar-hover)', overflow: 'hidden' }}
+        <div
+          className="p-3 border-t"
+          style={{
+            borderColor: 'var(--sidebar-border)',
+            background: 'rgba(0,0,0,0.15)',
+          }}
+        >
+          <Link
+            to="/perfil"
+            className="flex items-center gap-3 p-2.5 rounded-xl mb-2 hover:bg-white/[0.08] transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              overflow: 'hidden',
+              display: 'flex',
+            }}
           >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 text-white"
-              style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)' }}
-            >
-              {user?.nome?.charAt(0) || 'U'}
-            </div>
+            {user?.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt="Avatar"
+                className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+              />
+            ) : (
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 text-white"
+                style={{
+                  background: 'linear-gradient(135deg,#f59e0b,#ef4444)',
+                  boxShadow: '0 2px 8px rgba(245,158,11,0.4)',
+                }}
+              >
+                {user?.nome?.charAt(0) || 'U'}
+              </div>
+            )}
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{user?.nome || 'Utilizador'}</p>
                 <p className="text-xs capitalize truncate" style={{ color: 'var(--sidebar-text)' }}>{user?.perfil || 'admin'}</p>
               </div>
             )}
-          </div>
+          </Link>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-red-500/10 hover:text-red-400"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/15 hover:text-red-400 active:scale-95"
             style={{ color: 'var(--sidebar-text)' }}
           >
             <LogOut size={16} className="flex-shrink-0" />

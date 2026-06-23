@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
-import { FileText, Upload, Download, Search, File, Image as ImageIcon } from 'lucide-react';
+import { FileText, Upload, Download, Search, File, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const Documentos = () => {
@@ -51,6 +52,25 @@ const Documentos = () => {
     tipo: 'geral',
     ficheiro: null
   });
+
+  // Estado para modal de confirmação de eliminação
+  const [docToDelete, setDocToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!docToDelete) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/documentos/${docToDelete.id}`);
+      toast.success(`Documento "${docToDelete.titulo}" eliminado com sucesso!`);
+      setDocToDelete(null);
+      fetchDocumentos();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Erro ao eliminar documento');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -143,15 +163,25 @@ const Documentos = () => {
                     <td className="text-gray-500">{new Date(doc.criado_em).toLocaleDateString('pt-PT')}</td>
                     <td className="text-gray-500">{doc.carregado_por_nome || 'Sistema'}</td>
                     <td className="text-right">
-                      <a
-                        href={`http://localhost:5000${doc.ficheiro_url}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-outline p-2"
-                        title="Descarregar"
-                      >
-                        <Download size={16} />
-                      </a>
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={doc.ficheiro_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          download={doc.ficheiro_nome}
+                          className="btn btn-outline p-2"
+                          title="Descarregar"
+                        >
+                          <Download size={16} />
+                        </a>
+                        <button
+                          onClick={() => setDocToDelete(doc)}
+                          className="btn p-2 text-red-500 border border-red-200 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar documento"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -161,7 +191,7 @@ const Documentos = () => {
         </div>
       </div>
 
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-backdrop">
           <div className="modal-card max-w-md">
             <div className="modal-header">
@@ -209,7 +239,9 @@ const Documentos = () => {
                       <option value="estatuto">Estatuto</option>
                       <option value="contrato">Contrato</option>
                       <option value="circular">Circular</option>
-                      <option value="relatorio">Relatório Financeiro</option>
+                      <option value="relatorio">Relatório</option>
+                      <option value="declaracao">Declaração</option>
+                      <option value="outro">Outro</option>
                     </select>
                   </div>
                 </div>
@@ -235,7 +267,60 @@ const Documentos = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+      {/* Modal de Confirmação de Eliminação */}
+      {docToDelete && createPortal(
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-sm">
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
+                  <Trash2 size={18} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Eliminar Documento</h3>
+                  <p className="text-xs text-slate-500">Esta acção não pode ser revertida</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDocToDelete(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="text-gray-700 text-sm">
+                Tem a certeza que deseja eliminar o documento
+                <span className="font-bold text-gray-900"> "{docToDelete.titulo}"</span>?
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                O ficheiro será removido permanentemente do sistema.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                onClick={() => setDocToDelete(null)}
+                disabled={isDeleting}
+                className="btn btn-outline"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="btn bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? 'A eliminar...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

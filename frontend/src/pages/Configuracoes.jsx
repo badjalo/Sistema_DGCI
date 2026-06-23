@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
 import { Save } from 'lucide-react';
@@ -268,7 +269,7 @@ const Configuracoes = () => {
               A gestão detalhada de ACL (Access Control Lists) está em fase de implementação na v2.
             </div>
 
-            {showUserModal && (
+            {showUserModal && createPortal(
               <div className="modal-backdrop">
                 <div className="modal-card max-w-md">
                   <div className="modal-header">
@@ -362,7 +363,8 @@ const Configuracoes = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         )}

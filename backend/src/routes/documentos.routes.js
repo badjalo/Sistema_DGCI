@@ -20,6 +20,31 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
+// ─── ROTA PÚBLICA (sem autenticação) para documentos públicos ─────────────────
+router.get('/publicos', async (req, res, next) => {
+  try {
+    const { tipo, search = '' } = req.query;
+    let where = 'WHERE 1=1';
+    const params = [];
+    if (tipo) {
+      params.push(tipo);
+      where += ` AND d.tipo = $${params.length}`;
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      where += ` AND d.titulo ILIKE $${params.length}`;
+    }
+    const result = await query(`
+      SELECT d.id, d.titulo, d.tipo, d.descricao, d.ficheiro_url, d.ficheiro_nome, 
+             d.ficheiro_tamanho, d.ficheiro_tipo,
+             to_char(d.criado_em AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as criado_em
+      FROM documentos d
+      ${where} ORDER BY d.criado_em DESC
+    `, params);
+    res.json({ success: true, data: result.rows });
+  } catch (err) { next(err); }
+});
+
 router.get('/', authenticate, authorize('documentos:read'), async (req, res, next) => {
   try {
     const { tipo, search = '' } = req.query;

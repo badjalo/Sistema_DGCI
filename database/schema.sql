@@ -500,3 +500,16 @@ INSERT INTO utilizadores (nome, email, password_hash, perfil) VALUES
 ('Mamadú Bá Djaló', 'admin@sf-dgci.gw', crypt('Admin@2026!', gen_salt('bf', 12)), 'administrador');
 
 COMMIT;
+
+
+-- Table for Landing Page Slider
+CREATE TABLE IF NOT EXISTS landing_slider (
+    id SERIAL PRIMARY KEY,
+    titulo VARCHAR(255) NOT NULL,
+    descricao TEXT,
+    imagem_url VARCHAR(255) NOT NULL,
+    link_url VARCHAR(255),
+    ativo BOOLEAN DEFAULT true,
+    ordem INTEGER DEFAULT 0,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

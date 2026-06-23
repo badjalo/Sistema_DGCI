@@ -3,6 +3,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { criarNotificacao, notificarAdmins } = require('../utils/notificacoes');
 
 /** GET /api/quotas/config */
 const obterConfig = async (req, res, next) => {
@@ -118,6 +119,11 @@ const registarPagamento = async (req, res, next) => {
 
     let result;
     if (existing.rows.length) {
+      if (existing.rows[0].estado === 'pago') {
+        return res.status(400).json({ 
+          error: `Este membro já efetuou o pagamento da quota para o mês ${mes}/${ano}. Não é permitido duplicar o pagamento.` 
+        });
+      }
       result = await query(
         `UPDATE pagamentos SET estado = 'pago', valor = $1, data_pagamento = NOW(),
          metodo_pagamento = $2, referencia = $3, banco_id = $4, observacoes = $5, registado_por = $6
@@ -240,7 +246,154 @@ const registarPagamento = async (req, res, next) => {
     }
 
     res.status(201).json({ success: true, data: result.rows[0], message: 'Pagamento registado com sucesso' });
+
+    // ── Notificação automática ──
+    const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const nomeMes = MESES_PT[(mes - 1)] || mes;
+    // Notifica o próprio utilizador que registou
+    criarNotificacao({
+      utilizador_id: req.user.id,
+      titulo: 'Pagamento Registado',
+      mensagem: `Quota de ${nomeMes}/${ano} de ${membro?.rows[0]?.nome_completo || 'membro'} registada com sucesso.`,
+      tipo: 'sucesso',
+      link: '/quotas'
+    });
   } catch (err) { next(err); }
+};
+
+/** POST /api/pagamentos/lote */
+const registarPagamentoLote = async (req, res, next) => {
+  try {
+    const { membro_ids, mes, ano, metodo_pagamento, referencia, banco_id, observacoes } = req.body;
+
+    if (!Array.isArray(membro_ids) || !membro_ids.length) {
+      return res.status(400).json({ error: 'Nenhum membro selecionado para pagamento em massa' });
+    }
+
+    const resultados = [];
+
+    for (const membro_id of membro_ids) {
+      const membroResult = await query('SELECT nome_completo, fundo_social FROM membros WHERE id = $1', [membro_id]);
+      if (!membroResult.rows.length) continue;
+
+      const { nome_completo: nomeMembro, fundo_social: hasFundo } = membroResult.rows[0];
+      const valor = 1000 + (hasFundo ? 4000 : 0);
+
+      const existing = await query(
+        'SELECT id, estado FROM pagamentos WHERE membro_id = $1 AND mes = $2 AND ano = $3',
+        [membro_id, mes, ano]
+      );
+
+      let result;
+      if (existing.rows.length) {
+        if (existing.rows[0].estado === 'pago') {
+          // Já está pago, ignora este membro do lote
+          continue;
+        }
+        result = await query(
+          `UPDATE pagamentos SET estado = 'pago', valor = $1, data_pagamento = NOW(),
+           metodo_pagamento = $2, referencia = $3, banco_id = $4, observacoes = $5, registado_por = $6
+           WHERE membro_id = $7 AND mes = $8 AND ano = $9 RETURNING *`,
+          [valor, metodo_pagamento, referencia, banco_id, observacoes, req.user.id, membro_id, mes, ano]
+        );
+      } else {
+        result = await query(
+          `INSERT INTO pagamentos (membro_id, mes, ano, valor, estado, data_pagamento, metodo_pagamento, referencia, banco_id, observacoes, registado_por)
+           VALUES ($1, $2, $3, $4, 'pago', NOW(), $5, $6, $7, $8, $9) RETURNING *`,
+          [membro_id, mes, ano, valor, metodo_pagamento, referencia, banco_id, observacoes, req.user.id]
+        );
+
+        if (banco_id) {
+          await query('UPDATE bancos SET saldo_atual = saldo_atual + $1 WHERE id = $2', [valor, banco_id]);
+        }
+
+        if (hasFundo) {
+          const configQuota = await query(`SELECT id FROM categorias_financeiras WHERE nome = 'Quotas Mensais' LIMIT 1`);
+          if (configQuota.rows.length) {
+            await query(
+              `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, registado_por)
+               VALUES ($1, $2, NOW(), $3, $4, $5, $6)`,
+              [`Quota ${mes}/${ano} - ${nomeMembro}`, 1000, configQuota.rows[0].id, banco_id, membro_id, req.user.id]
+            );
+          }
+          const configFundo = await query(`SELECT id FROM categorias_financeiras WHERE nome = 'Fundo Social' LIMIT 1`);
+          if (configFundo.rows.length) {
+            await query(
+              `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, registado_por)
+               VALUES ($1, $2, NOW(), $3, $4, $5, $6)`,
+              [`Fundo Social ${mes}/${ano} - ${nomeMembro}`, 4000, configFundo.rows[0].id, banco_id, membro_id, req.user.id]
+            );
+          }
+        } else {
+          const configQuota = await query(`SELECT id FROM categorias_financeiras WHERE nome = 'Quotas Mensais' LIMIT 1`);
+          if (configQuota.rows.length) {
+            await query(
+              `INSERT INTO receitas (descricao, valor, data_receita, categoria_id, banco_id, membro_id, registado_por)
+               VALUES ($1, $2, NOW(), $3, $4, $5, $6)`,
+              [`Quota ${mes}/${ano} - ${nomeMembro}`, valor, configQuota.rows[0].id, banco_id, membro_id, req.user.id]
+            );
+          }
+        }
+      }
+
+      gerarReciboBackground(result.rows[0].id).catch(console.error);
+      resultados.push(result.rows[0]);
+    }
+
+    res.json({ success: true, count: resultados.length, message: `${resultados.length} pagamentos processados com sucesso.` });
+
+    // ── Notificação automática ──
+    const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const nomeMes = MESES_PT[(mes - 1)] || mes;
+    notificarAdmins({
+      titulo: 'Pagamento em Lote Registado',
+      mensagem: `${resultados.length} quotas de ${nomeMes}/${ano} foram registadas em lote por ${req.user.nome || 'utilizador'}.`,
+      tipo: 'info',
+      link: '/quotas'
+    });
+  } catch (err) { next(err); }
+};
+
+const gerarReciboBackground = async (pagamentoId) => {
+  const pay = await query(
+    `SELECT p.*, m.nome_completo, m.numero_membro, u.nome as registado_por_nome
+     FROM pagamentos p
+     LEFT JOIN membros m ON m.id = p.membro_id
+     LEFT JOIN utilizadores u ON u.id = p.registado_por
+     WHERE p.id = $1`,
+    [pagamentoId]
+  );
+  const payment = pay.rows[0];
+  if (!payment) return;
+
+  const uploadsDir = path.join(__dirname, '../../uploads/recibos');
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  const fileName = `recibo_${payment.id}_${uuidv4()}.pdf`;
+  const filePath = path.join(uploadsDir, fileName);
+
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const stream = fs.createWriteStream(filePath);
+  doc.pipe(stream);
+
+  doc.fontSize(18).text('Recibo de Pagamento', { align: 'center' });
+  doc.moveDown();
+  doc.fontSize(12).text(`Número do Recibo: ${payment.id}`);
+  doc.text(`Data: ${new Date(payment.data_pagamento).toLocaleString('pt-PT')}`);
+  doc.moveDown();
+  doc.text(`Membro: ${payment.nome_completo || 'N/A'}`);
+  doc.text(`Número Membro: ${payment.numero_membro || 'N/A'}`);
+  doc.moveDown();
+  doc.text(`Mês/Ano: ${payment.mes}/${payment.ano}`);
+  doc.text(`Valor: ${parseFloat(payment.valor).toFixed(2)} XOF`);
+  doc.text(`Método: ${payment.metodo_pagamento || 'N/A'}`);
+  if (payment.referencia) doc.text(`Referência: ${payment.referencia}`);
+  doc.moveDown();
+  doc.text(`Registado por: ${payment.registado_por_nome || 'Sistema'}`);
+  doc.end();
+
+  await new Promise((resolve) => stream.on('finish', resolve));
+  const receiptUrl = `/uploads/recibos/${fileName}`;
+  await query('UPDATE pagamentos SET recibo_url = $1 WHERE id = $2', [receiptUrl, payment.id]);
 };
 
 /** GET /api/pagamentos */
@@ -276,4 +429,5 @@ const listarPagamentos = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { obterConfig, definirConfig, situacao, registarPagamento, listarPagamentos };
+module.exports = { obterConfig, definirConfig, situacao, registarPagamento, registarPagamentoLote, listarPagamentos };
+

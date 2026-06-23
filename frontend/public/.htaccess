@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Redirecionar HTTP para HTTPS (essencial para segurança e cookies httpOnly)
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Se o arquivo, diretório ou link simbólico existir, sirva-o diretamente
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+
+  # Caso contrário, envie todas as requisições para o index.html (React Router)
+  RewriteRule . /index.html [L]
+</IfModule>

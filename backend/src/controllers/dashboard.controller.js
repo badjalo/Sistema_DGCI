@@ -139,6 +139,51 @@ const resumo = async (req, res, next) => {
       GROUP BY mes ORDER BY mes
     `, [ano]);
 
+    // ── ACTIVIDADE RECENTE ─────────────────────────────────────────────────
+
+    // Últimos 6 pagamentos registados
+    const pagamentosRecentes = await query(`
+      SELECT p.id, p.valor, p.mes, p.ano, p.estado, p.criado_em,
+             m.nome_completo, m.numero_membro
+      FROM pagamentos p
+      JOIN membros m ON m.id = p.membro_id
+      ORDER BY p.criado_em DESC LIMIT 6
+    `).catch(() => ({ rows: [] }));
+
+    // Últimas 5 mensagens de contacto pendentes
+    const mensagensPendentes = await query(`
+      SELECT id, nome, assunto, criado_em, estado
+      FROM contacto_mensagens
+      WHERE estado = 'pendente'
+      ORDER BY criado_em DESC LIMIT 5
+    `).catch(() => ({ rows: [] }));
+
+    // Total de mensagens pendentes
+    const totalMensagens = await query(`
+      SELECT COUNT(*) as total FROM contacto_mensagens WHERE estado = 'pendente'
+    `).catch(() => ({ rows: [{ total: 0 }] }));
+
+    // Top 5 membros com mais meses em dívida (alertas de insolvência)
+    const devedores = await query(`
+      WITH params AS (
+        SELECT GREATEST(0, EXTRACT(MONTH FROM NOW())::integer - 1) as max_mes,
+               EXTRACT(YEAR FROM NOW())::integer as ano
+      )
+      SELECT m.nome_completo, m.numero_membro,
+             COALESCE(missing.missing_months, 0) as meses_divida
+      FROM membros m
+      CROSS JOIN params
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(COUNT(*), 0) as missing_months
+        FROM generate_series(1, params.max_mes) AS gs(mes)
+        LEFT JOIN pagamentos pm ON pm.membro_id = m.id AND pm.ano = params.ano AND pm.mes = gs.mes
+        WHERE pm.id IS NULL
+          AND MAKE_DATE(params.ano, gs.mes, 1) >= DATE_TRUNC('month', m.data_admissao)
+      ) missing ON true
+      WHERE m.estado = 'ativo' AND COALESCE(missing.missing_months, 0) >= 3
+      ORDER BY meses_divida DESC LIMIT 5
+    `).catch(() => ({ rows: [] }));
+
     res.json({
       success: true,
       data: {
@@ -147,7 +192,12 @@ const resumo = async (req, res, next) => {
         financeiro: financeiro.rows[0],
         membros_recentes: normalizeMembersList(recentes.rows),
         fluxo_mensal: fluxoMensal.rows,
-        quotas_mensal: quotasMensal.rows
+        quotas_mensal: quotasMensal.rows,
+        // Actividade recente
+        pagamentos_recentes: pagamentosRecentes.rows,
+        mensagens_pendentes: mensagensPendentes.rows,
+        total_mensagens_pendentes: parseInt(totalMensagens.rows[0]?.total || 0),
+        devedores_alerta: devedores.rows
       }
     });
   } catch (err) {

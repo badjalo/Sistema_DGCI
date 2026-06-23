@@ -120,6 +120,7 @@ const processUploadedImages = async (req, res, next) => {
 router.get('/estatisticas', authenticate, authorize('membros:read'), ctrl.estatisticas);
 router.get('/', authenticate, authorize('membros:read'), ctrl.listar);
 router.get('/next-numero', authenticate, authorize('membros:create'), ctrl.nextNumero);
+router.post('/cartao/lote', authenticate, authorize('membros:read'), ctrl.obterCartoesLote);
 router.get('/:id/cartao', authenticate, authorize('membros:read'), ctrl.obterCartao);
 router.get('/:id/qr', authenticate, authorize('membros:read'), ctrl.obterQR);
 router.get('/qr/numero/:numero', authenticate, authorize('membros:read'), ctrl.obterQRByNumero);

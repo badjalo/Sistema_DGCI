@@ -319,4 +319,32 @@ async function generateCard(membro, res) {
   doc.end();
 }
 
-module.exports = { generateCard };
+async function generateCardsBatch(membros, res) {
+  const { query } = require('../config/database');
+  let configs = {};
+  try {
+    const result = await query('SELECT chave, valor FROM configuracoes');
+    result.rows.forEach(r => { configs[r.chave] = r.valor; });
+  } catch (err) {
+    console.error('Erro ao buscar configuracoes para o cartao:', err);
+  }
+
+  const doc = new PDFDocument({ size: [W, H], margin: 0 });
+  doc.pipe(res);
+
+  const logoPath = getLogoPath();
+
+  for (let i = 0; i < membros.length; i++) {
+    const membro = membros[i];
+    if (i > 0) {
+      doc.addPage({ size: [W, H], margin: 0 });
+    }
+    await drawFront(doc, membro, logoPath);
+    await drawBack(doc, membro, logoPath, configs);
+  }
+
+  doc.end();
+}
+
+module.exports = { generateCard, generateCardsBatch };
+
