@@ -35,6 +35,8 @@ import Auditoria from './pages/Auditoria';
 import Configuracoes from './pages/Configuracoes';
 import Utilizadores from './pages/Utilizadores';
 import Perfil from './pages/Perfil';
+import Transparencia from './pages/Transparencia';
+import Votacoes from './pages/Votacoes';
 
 function App() {
   useEffect(() => {
@@ -104,6 +106,8 @@ function App() {
               <Route path="/configuracoes"          element={<Configuracoes />} />
               <Route path="/utilizadores"           element={<Utilizadores />} />
               <Route path="/perfil"                 element={<Perfil />} />
+              <Route path="/transparencia"          element={<Transparencia />} />
+              <Route path="/votacoes"               element={<Votacoes />} />
             </Route>
           </Route>
 

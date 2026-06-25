@@ -68,6 +68,7 @@ export const AuthProvider = ({ children }) => {
       tesoureiro: ['financeiro', 'quotas', 'read'],
       secretario: ['membros', 'documentos', 'comunicados', 'read'],
       operador: ['read'],
+      membro: ['transparencia', 'votacoes', 'dashboard:read'],
     };
 
     const perms = roleMap[user.perfil] || [];

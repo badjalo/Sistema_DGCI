@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, CreditCard, DollarSign,
   FileText, MessageSquare, BarChart3, Building,
-  Settings, LogOut, ChevronLeft, ChevronRight, Landmark, Inbox, ShieldCheck
+  Settings, LogOut, ChevronLeft, ChevronRight, Landmark, Inbox, ShieldCheck, Vote
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 
@@ -13,25 +13,27 @@ const menuGroups = [
     label: 'Principal',
     items: [
       { path: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard' },
-      { path: '/membros',     icon: Users,           label: 'Membros' },
+      { path: '/membros',     icon: Users,           label: 'Membros', requiredPermission: 'membros' },
+      { path: '/votacoes',    icon: Vote,            label: 'Votações & Sondagens', requiredPermission: 'votacoes' },
     ]
   },
   {
     label: 'Financeiro',
     items: [
-      { path: '/quotas',      icon: CreditCard,  label: 'Quota e Fundo Social' },
-      { path: '/financeiro',  icon: DollarSign,  label: 'Controlo Financeiro' },
-      { path: '/relatorios',  icon: BarChart3,   label: 'Relatórios' },
+      { path: '/quotas',      icon: CreditCard,  label: 'Quota e Fundo Social', requiredPermission: 'quotas' },
+      { path: '/financeiro',  icon: DollarSign,  label: 'Controlo Financeiro', requiredPermission: 'financeiro' },
+      { path: '/transparencia', icon: Landmark,    label: 'Transparência', requiredPermission: 'transparencia' },
+      { path: '/relatorios',  icon: BarChart3,   label: 'Relatórios', requiredPermission: 'financeiro' },
     ]
   },
   {
     label: 'Organização',
     items: [
-      { path: '/departamentos',   icon: Building,      label: 'Departamentos' },
-      { path: '/documentos',      icon: FileText,      label: 'Documentos' },
-      { path: '/comunicados',     icon: MessageSquare, label: 'Comunicados' },
-      { path: '/sindicato-admin', icon: Landmark,      label: 'O Sindicato' },
-      { path: '/mensagens',       icon: Inbox,         label: 'Mensagens' },
+      { path: '/departamentos',   icon: Building,      label: 'Departamentos', requiredPermission: 'membros' },
+      { path: '/documentos',      icon: FileText,      label: 'Documentos', requiredPermission: 'documentos' },
+      { path: '/comunicados',     icon: MessageSquare, label: 'Comunicados', requiredPermission: 'comunicados' },
+      { path: '/sindicato-admin', icon: Landmark,      label: 'O Sindicato', requiredPermission: 'read' },
+      { path: '/mensagens',       icon: Inbox,         label: 'Mensagens', requiredPermission: 'comunicados' },
     ]
   },
   {
@@ -39,13 +41,13 @@ const menuGroups = [
     items: [
       { path: '/utilizadores', icon: Users,       label: 'Utilizadores', adminOnly: true },
       { path: '/auditoria',    icon: ShieldCheck, label: 'Auditoria',    adminOnly: true },
-      { path: '/configuracoes', icon: Settings,   label: 'Configurações' },
+      { path: '/configuracoes', icon: Settings,   label: 'Configurações', requiredPermission: 'read' },
     ]
   },
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -140,6 +142,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               <div className="space-y-0.5">
                 {group.items.map((item, ii) => {
                   if (item.adminOnly && user?.perfil !== 'administrador') return null;
+                  if (item.requiredPermission && !hasPermission(item.requiredPermission)) return null;
                   const Icon = item.icon;
                   const isActive = location.pathname.startsWith(item.path);
                   return (

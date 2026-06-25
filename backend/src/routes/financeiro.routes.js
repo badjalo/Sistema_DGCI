@@ -10,5 +10,6 @@ router.get('/despesas', authenticate, authorize('financeiro:read'), ctrl.listarD
 router.post('/despesas', authenticate, authorize('financeiro:create'), ctrl.criarDespesa);
 router.get('/bancos', authenticate, authorize('financeiro:read'), ctrl.listarBancos);
 router.get('/categorias', authenticate, authorize('financeiro:read'), ctrl.listarCategorias);
+router.get('/transparencia', authenticate, authorize('transparencia:read'), ctrl.transparencia);
 
 module.exports = router;

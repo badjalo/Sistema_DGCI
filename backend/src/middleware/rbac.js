@@ -18,7 +18,10 @@ const PERMISSIONS = {
     'utilizadores:read',
     'configuracoes:read',
     'dashboard:read',
-    'auditoria:read'
+    'auditoria:read',
+    'transparencia:read',
+    'votacoes:read',
+    'votacoes:votar'
   ],
   tesoureiro: [
     'membros:read',
@@ -29,7 +32,10 @@ const PERMISSIONS = {
     'departamentos:read',
     'cartoes:read',
     'dashboard:read',
-    'comunicados:read'
+    'comunicados:read',
+    'transparencia:read',
+    'votacoes:read',
+    'votacoes:votar'
   ],
   secretario: [
     'membros:read', 'membros:create', 'membros:update',
@@ -40,7 +46,13 @@ const PERMISSIONS = {
     'departamentos:read',
     'cartoes:read', 'cartoes:create',
     'relatorios:read',
-    'dashboard:read'
+    'dashboard:read',
+    'transparencia:read',
+    'votacoes:read',
+    'votacoes:votar',
+    'votacoes:create',
+    'votacoes:update',
+    'votacoes:delete'
   ],
   operador: [
     'membros:read',
@@ -50,7 +62,10 @@ const PERMISSIONS = {
     'comunicados:read',
     'departamentos:read',
     'cartoes:read',
-    'dashboard:read'
+    'dashboard:read',
+    'transparencia:read',
+    'votacoes:read',
+    'votacoes:votar'
   ],
   auditor: [
     'membros:read',
@@ -62,7 +77,16 @@ const PERMISSIONS = {
     'relatorios:read',
     'departamentos:read',
     'dashboard:read',
-    'auditoria:read'
+    'auditoria:read',
+    'transparencia:read',
+    'votacoes:read',
+    'votacoes:votar'
+  ],
+  membro: [
+    'dashboard:read',
+    'transparencia:read',
+    'votacoes:read',
+    'votacoes:votar'
   ]
 };
 

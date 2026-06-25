@@ -178,4 +178,93 @@ const resumo = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { listarReceitas, criarReceita, listarDespesas, criarDespesa, listarBancos, listarCategorias, resumo };
+/** GET /api/financeiro/transparencia */
+const transparencia = async (req, res, next) => {
+  try {
+    const ano = parseInt(req.query.ano, 10) || new Date().getFullYear();
+
+    // 1. Receitas e Despesas mensais para gráficos
+    const evolucaoMensal = await query(`
+      SELECT 
+        m.mes,
+        COALESCE(SUM(CASE WHEN t.tipo = 'receita' THEN t.valor ELSE 0 END), 0) as receitas,
+        COALESCE(SUM(CASE WHEN t.tipo = 'despesa' THEN t.valor ELSE 0 END), 0) as despesas
+      FROM generate_series(1, 12) AS m(mes)
+      LEFT JOIN (
+        SELECT 'receita' as tipo, valor, EXTRACT(MONTH FROM data_receita) as mes FROM receitas WHERE EXTRACT(YEAR FROM data_receita) = $1
+        UNION ALL
+        SELECT 'despesa' as tipo, valor, EXTRACT(MONTH FROM data_despesa) as mes FROM despesas WHERE EXTRACT(YEAR FROM data_despesa) = $1
+      ) t ON t.mes = m.mes
+      GROUP BY m.mes
+      ORDER BY m.mes
+    `, [ano]);
+
+    // 2. Receitas por categoria
+    const receitasPorCategoria = await query(`
+      SELECT cf.nome as categoria, cf.cor, COALESCE(SUM(r.valor), 0) as total
+      FROM categorias_financeiras cf
+      JOIN receitas r ON r.categoria_id = cf.id
+      WHERE cf.tipo = 'receita' AND EXTRACT(YEAR FROM r.data_receita) = $1
+      GROUP BY cf.nome, cf.cor
+      ORDER BY total DESC
+    `, [ano]);
+
+    // 3. Despesas por categoria
+    const despesasPorCategoria = await query(`
+      SELECT cf.nome as categoria, cf.cor, COALESCE(SUM(d.valor), 0) as total
+      FROM categorias_financeiras cf
+      JOIN despesas d ON d.categoria_id = cf.id
+      WHERE cf.tipo = 'despesa' AND EXTRACT(YEAR FROM d.data_despesa) = $1
+      GROUP BY cf.nome, cf.cor
+      ORDER BY total DESC
+    `, [ano]);
+
+    // 4. Saldos nos bancos
+    const bancos = await query('SELECT nome, saldo_atual FROM bancos WHERE ativo = true');
+    const saldoTotal = bancos.rows.reduce((acc, b) => acc + parseFloat(b.saldo_atual || 0), 0);
+
+    // 5. Totais gerais do ano
+    const totais = await query(`
+      SELECT
+        COALESCE(SUM(CASE WHEN tipo = 'receita' THEN valor ELSE 0 END), 0) as total_receitas,
+        COALESCE(SUM(CASE WHEN tipo = 'despesa' THEN valor ELSE 0 END), 0) as total_despesas
+      FROM (
+        SELECT 'receita' as tipo, valor FROM receitas WHERE EXTRACT(YEAR FROM data_receita) = $1
+        UNION ALL
+        SELECT 'despesa' as tipo, valor FROM despesas WHERE EXTRACT(YEAR FROM data_despesa) = $1
+      ) t
+    `, [ano]);
+
+    res.json({
+      success: true,
+      data: {
+        ano,
+        total_receitas: parseFloat(totais.rows[0].total_receitas),
+        total_despesas: parseFloat(totais.rows[0].total_despesas),
+        saldo_anual: parseFloat(totais.rows[0].total_receitas) - parseFloat(totais.rows[0].total_despesas),
+        saldo_caixa: saldoTotal,
+        bancos: bancos.rows,
+        evolucaoMensal: evolucaoMensal.rows.map(r => ({
+          mes: r.mes,
+          receitas: parseFloat(r.receitas),
+          despesas: parseFloat(r.despesas),
+          saldo: parseFloat(r.receitas) - parseFloat(r.despesas)
+        })),
+        receitasPorCategoria: receitasPorCategoria.rows.map(r => ({
+          categoria: r.categoria,
+          cor: r.cor,
+          total: parseFloat(r.total)
+        })),
+        despesasPorCategoria: despesasPorCategoria.rows.map(r => ({
+          categoria: r.categoria,
+          cor: r.cor,
+          total: parseFloat(r.total)
+        }))
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { listarReceitas, criarReceita, listarDespesas, criarDespesa, listarBancos, listarCategorias, resumo, transparencia };
