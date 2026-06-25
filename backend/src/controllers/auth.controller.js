@@ -12,6 +12,8 @@ const generateToken = (user) => {
   );
 };
 
+const DEFAULT_MEMBER_PASSWORD = 'sf-dgci123*#';
+
 /** POST /api/auth/login */
 const login = async (req, res, next) => {
   try {
@@ -98,7 +100,8 @@ const login = async (req, res, next) => {
         perfil: user.perfil,
         avatar_url: normalizeUploadUrl(user.avatar_url),
         membro_foto: normalizeUploadUrl(user.membro_foto),
-        preferencias: user.preferencias
+        preferencias: user.preferencias,
+        deve_mudar_senha: user.deve_mudar_senha || false
       }
     });
   } catch (err) {
@@ -175,7 +178,11 @@ const changePassword = async (req, res, next) => {
     }
 
     const hash = await bcrypt.hash(new_password, 12);
-    await query('UPDATE utilizadores SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+    // Ao mudar senha, limpar sempre a flag de primeiro login
+    await query(
+      'UPDATE utilizadores SET password_hash = $1, deve_mudar_senha = false WHERE id = $2',
+      [hash, req.user.id]
+    );
 
     await query(
       `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade)
@@ -330,6 +337,74 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { login, logout, me, changePassword, updateProfile, recuperarSenha, redefinirSenha };
+/** POST /api/auth/provisionar-membros  (apenas administrador) */
+const provisionarContasMembros = async (req, res, next) => {
+  try {
+    // Buscar membros com email que não têm utilizador
+    const membrosRes = await query(`
+      SELECT m.id, m.nome_completo, m.email
+      FROM membros m
+      WHERE m.email IS NOT NULL
+        AND m.email != ''
+        AND NOT EXISTS (
+          SELECT 1 FROM utilizadores u WHERE u.email = m.email
+        )
+        AND m.estado IN ('ativo', 'suspenso')
+      ORDER BY m.nome_completo
+    `);
+
+    if (membrosRes.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Todos os membros com email já possuem conta de acesso.',
+        criados: 0
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(DEFAULT_MEMBER_PASSWORD, 12);
+    let criados = 0;
+    const erros = [];
+
+    for (const membro of membrosRes.rows) {
+      try {
+        const nomeParts = membro.nome_completo.trim().split(' ');
+        const nome = nomeParts.length > 1
+          ? `${nomeParts[0]} ${nomeParts[nomeParts.length - 1]}`
+          : nomeParts[0];
+
+        const inserted = await query(`
+          INSERT INTO utilizadores (nome, email, password_hash, perfil, membro_id, ativo, deve_mudar_senha)
+          VALUES ($1, $2, $3, 'membro', $4, true, true)
+          ON CONFLICT (email) DO NOTHING
+          RETURNING id
+        `, [nome, membro.email.toLowerCase().trim(), passwordHash, membro.id]);
+
+        if (inserted.rows.length > 0) {
+          criados++;
+        }
+      } catch (err) {
+        erros.push({ email: membro.email, erro: err.message });
+      }
+    }
+
+    // Log de auditoria
+    await query(
+      `INSERT INTO auditoria_logs (utilizador_id, utilizador_nome, acao, entidade, detalhes)
+       VALUES ($1, $2, 'PROVISIONAR_CONTAS_MEMBROS', 'utilizadores', $3)`,
+      [req.user.id, req.user.nome, JSON.stringify({ criados, erros: erros.length })]
+    ).catch(() => {});
+
+    res.json({
+      success: true,
+      message: `${criados} conta(s) criada(s) com sucesso. Senha padrão: ${DEFAULT_MEMBER_PASSWORD}`,
+      criados,
+      erros
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { login, logout, me, changePassword, updateProfile, recuperarSenha, redefinirSenha, provisionarContasMembros };
 
 

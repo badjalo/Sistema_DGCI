@@ -28,20 +28,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const { data, headers } = await api.post('/auth/login', { email, password });
+      const { data } = await api.post('/auth/login', { email, password });
       if (data.success) {
-        // ✅ Guardar token em localStorage para funcionar em cross-domain
-        // O token também é enviado em httpOnly cookie pelo servidor como backup
+        // Guardar token em localStorage para funcionar em cross-domain
         if (data.token) {
           localStorage.setItem('authToken', data.token);
         }
         setUser(data.user);
-        return true;
+        return { success: true, deve_mudar_senha: data.user?.deve_mudar_senha || false };
       }
-      return false;
+      return { success: false };
     } catch (error) {
       console.error('Erro no login:', error);
-      return false;
+      return { success: false };
     }
   };
 
@@ -56,6 +55,11 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       window.location.href = '/';
     }
+  };
+
+  // Chamado após o primeiro login mudar a senha com sucesso
+  const markPasswordChanged = () => {
+    setUser(prev => prev ? { ...prev, deve_mudar_senha: false } : prev);
   };
 
   const hasPermission = (permission) => {
@@ -76,7 +80,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading, hasPermission }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, loading, hasPermission, markPasswordChanged }}>
       {children}
     </AuthContext.Provider>
   );

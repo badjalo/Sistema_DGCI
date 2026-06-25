@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
   Users, UserPlus, Search, Edit, Trash2, KeyRound,
-  CheckCircle, XCircle, Shield, RefreshCw, X, ShieldAlert, Mail, User
+  CheckCircle, XCircle, Shield, RefreshCw, X, ShieldAlert, Mail, User, Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const PERFIS = [
-  { value: 'administrador', label: 'Administrador', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-  { value: 'operador',      label: 'Operador',      color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-  { value: 'leitor',        label: 'Leitor',        color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  { value: 'administrador', label: 'Administrador',  color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+  { value: 'presidente',    label: 'Presidente',     color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  { value: 'secretario',    label: 'Secretário',     color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+  { value: 'tesoureiro',    label: 'Tesoureiro',     color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  { value: 'operador',      label: 'Operador',       color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  { value: 'auditor',       label: 'Auditor',        color: '#ec4899', bg: 'rgba(236,72,153,0.1)' },
+  { value: 'membro',        label: 'Membro',         color: '#64748b', bg: 'rgba(100,116,139,0.1)' },
 ];
 
 const getPerfilBadge = (perfil) => {
@@ -159,6 +163,23 @@ const Utilizadores = () => {
     }
   };
 
+  const handleProvisionarMembros = async () => {
+    if (!window.confirm('Criar contas de acesso para todos os membros com email cadastrado?\n\nSenha padrão: sf-dgci123*#\n\nOs membros serão obrigados a mudar a senha no primeiro login.')) return;
+    try {
+      const res = await api.post('/auth/provisionar-membros');
+      if (res.data.success) {
+        if (res.data.criados === 0) {
+          toast.success(res.data.message);
+        } else {
+          toast.success(`✅ ${res.data.criados} conta(s) criada(s) com sucesso!`);
+        }
+        fetchUtilizadores();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao provisionar contas.');
+    }
+  };
+
   const handleDelete = async (id) => {
     if (id === currentUser.id) {
       toast.error('Não pode eliminar a sua própria conta.');
@@ -205,13 +226,23 @@ const Utilizadores = () => {
           <div className="page-header-accent" />
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          className="btn btn-primary flex items-center gap-2"
-        >
-          <UserPlus size={16} />
-          Adicionar Utilizador
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleProvisionarMembros}
+            className="btn btn-outline flex items-center gap-2"
+            title="Criar contas de acesso para todos os membros com email cadastrado"
+          >
+            <Zap size={15} />
+            Provisionar Membros
+          </button>
+          <button
+            onClick={handleOpenCreate}
+            className="btn btn-primary flex items-center gap-2"
+          >
+            <UserPlus size={16} />
+            Adicionar Utilizador
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}

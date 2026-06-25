@@ -45,9 +45,10 @@ const Login = () => {
 
     setIsSubmitting(true);
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.success) {
         toast.success('Login efetuado com sucesso!');
+        // ProtectedRoute interceta e mostra PrimeiroLogin se deve_mudar_senha === true
         navigate('/dashboard');
       } else {
         toast.error('Credenciais inválidas. Verifique o email e a palavra-passe.');
