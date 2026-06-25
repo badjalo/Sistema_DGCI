@@ -116,17 +116,14 @@ const validateMembroCreate = [
  * Validações de Alteração de Password
  */
 const validateChangePassword = [
-    body('currentPassword')
+    body('current_password')
         .isLength({ min: 8 })
-        .withMessage('Password atual inválida'),
-    body('newPassword')
-        .isLength({ min: 12 })
-        .withMessage('Nova password deve ter no mínimo 12 caracteres')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-        .withMessage('Nova password deve conter maiúsculas, minúsculas, números e caracteres especiais'),
-    body('confirmPassword')
-        .custom((value, { req }) => value === req.body.newPassword)
-        .withMessage('Passwords não correspondem'),
+        .withMessage('Password atual deve ter no mínimo 8 caracteres'),
+    body('new_password')
+        .isLength({ min: 8 })
+        .withMessage('Nova password deve ter no mínimo 8 caracteres')
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+        .withMessage('Nova password deve conter maiúsculas, minúsculas e números'),
     handleValidationErrors
 ];
 
