@@ -45,10 +45,8 @@ const validateLogin = [
         .normalizeEmail()
         .toLowerCase(),
     body('password')
-        .isLength({ min: 8 })
-        .withMessage('Password deve ter no mínimo 8 caracteres')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Password deve conter maiúsculas, minúsculas e números'),
+        .notEmpty()
+        .withMessage('Password é obrigatória'),
     handleValidationErrors
 ];
 
