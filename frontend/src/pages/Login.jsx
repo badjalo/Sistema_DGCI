@@ -21,7 +21,21 @@ const Login = () => {
     if (savedRemember) setRememberMe(true);
     // Trigger mount animation
     const t = setTimeout(() => setMounted(true), 10);
-    return () => clearTimeout(t);
+
+    const handleMouseMove = (e) => {
+      const { clientX, clientY } = e;
+      const moveX = (clientX - window.innerWidth / 2) * 0.05;
+      const moveY = (clientY - window.innerHeight / 2) * 0.05;
+      document.documentElement.style.setProperty('--mouse-x', `${moveX}px`);
+      document.documentElement.style.setProperty('--mouse-y', `${moveY}px`);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      clearTimeout(t);
+    };
   }, []);
 
   if (user) {
@@ -64,42 +78,48 @@ const Login = () => {
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden gradient-animated"
     >
-      {/* Animated blobs */}
+      {/* Parallax blobs — move subtly with mouse */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="animate-float absolute"
           style={{
             top: '8%',
             left: '10%',
-            width: '400px',
-            height: '400px',
-            background: 'radial-gradient(circle, rgba(59,111,245,0.18) 0%, transparent 70%)',
+            width: '450px',
+            height: '450px',
+            background: 'radial-gradient(circle, rgba(59,111,245,0.22) 0%, transparent 70%)',
             borderRadius: '50%',
-            filter: 'blur(40px)',
+            filter: 'blur(50px)',
+            transform: 'translate(calc(var(--mouse-x, 0px) * 1.2), calc(var(--mouse-y, 0px) * 1.2))',
+            transition: 'transform 0.8s cubic-bezier(0.16,1,0.3,1)',
           }}
         />
         <div
           className="animate-float-delay absolute"
           style={{
-            top: '50%',
-            right: '8%',
-            width: '350px',
-            height: '350px',
-            background: 'radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%)',
+            top: '45%',
+            right: '5%',
+            width: '380px',
+            height: '380px',
+            background: 'radial-gradient(circle, rgba(168,85,247,0.18) 0%, transparent 70%)',
             borderRadius: '50%',
-            filter: 'blur(40px)',
+            filter: 'blur(45px)',
+            transform: 'translate(calc(var(--mouse-x, 0px) * -0.8), calc(var(--mouse-y, 0px) * -0.8))',
+            transition: 'transform 1s cubic-bezier(0.16,1,0.3,1)',
           }}
         />
         <div
           className="animate-float-delay2 absolute"
           style={{
-            bottom: '10%',
-            left: '30%',
-            width: '300px',
-            height: '300px',
-            background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)',
+            bottom: '8%',
+            left: '28%',
+            width: '320px',
+            height: '320px',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 70%)',
             borderRadius: '50%',
-            filter: 'blur(40px)',
+            filter: 'blur(42px)',
+            transform: 'translate(calc(var(--mouse-x, 0px) * 0.6), calc(var(--mouse-y, 0px) * 0.6))',
+            transition: 'transform 1.2s cubic-bezier(0.16,1,0.3,1)',
           }}
         />
 
@@ -152,12 +172,19 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Card */}
+        {/* Card — with animated gradient border glow */}
         <div
-          className="glass-surface rounded-2xl p-8"
           style={{
             animation: 'fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s both',
+            borderRadius: '18px',
+            padding: '2px',
+            background: 'linear-gradient(135deg, rgba(59,111,245,0.5) 0%, rgba(168,85,247,0.4) 50%, rgba(16,185,129,0.3) 100%)',
+            boxShadow: '0 0 40px rgba(59,111,245,0.15), 0 24px 64px rgba(0,0,0,0.4)',
           }}
+        >
+        <div
+          className="glass-surface rounded-2xl p-8"
+          style={{ borderRadius: '16px' }}
         >
           {/* Card header accent */}
           <div
@@ -303,6 +330,7 @@ const Login = () => {
             Ministério das Finanças • República da Guiné-Bissau
           </p>
         </div>
+        </div>{/* end gradient border wrapper */}
       </div>
     </div>
   );

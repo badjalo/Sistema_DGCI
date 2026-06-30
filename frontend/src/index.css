@@ -33,14 +33,14 @@
   --text-invert:    #ffffff;
 
   /* Sidebar */
-  --sidebar-bg:      #0f172a;
+  --sidebar-bg:      rgba(15, 23, 42, 0.88);
   --sidebar-text:    #94a3b8;
   --sidebar-active:  #3b6ff5;
   --sidebar-hover:   rgba(255,255,255,0.07);
   --sidebar-border:  rgba(255,255,255,0.06);
 
   /* Header */
-  --header-bg:      rgba(255,255,255,0.82);
+  --header-bg:      rgba(255,255,255,0.75);
   --header-border:  #e2e6ef;
 
   /* Status */
@@ -88,7 +88,7 @@
   --text-2:         #94a3b8;
   --text-3:         #64748b;
 
-  --header-bg:      rgba(17, 24, 39, 0.85);
+  --header-bg:      rgba(17, 24, 39, 0.72);
   --header-border:  rgba(255,255,255,0.06);
 
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
@@ -932,4 +932,61 @@ header {
   box-shadow: var(--shadow-lg) !important;
   color: var(--text-1) !important;
   padding: 10px 14px !important;
+}
+
+/* ── Login card animated gradient border ── */
+@keyframes gradientRotate {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Dashboard chart type select dropdowns ── */
+select option {
+  background: var(--surface);
+  color: var(--text-1);
+}
+
+/* ── Sidebar active item subtle glow pulse ── */
+@keyframes sidebarGlow {
+  0%, 100% { box-shadow: 0 8px 24px rgba(59,111,245,0.35), inset 0 1px 0 rgba(255,255,255,0.15); }
+  50%       { box-shadow: 0 10px 30px rgba(99,102,241,0.5),  inset 0 1px 0 rgba(255,255,255,0.2); }
+}
+
+/* ── Quotas chart toggle pill strip ── */
+.chart-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.chart-toggle button {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+/* ── KPI card subtle hover shimmer ── */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.04) 60%, rgba(255,255,255,0) 80%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+.kpi-card:hover::after {
+  transform: translateX(100%);
 }

@@ -5,7 +5,7 @@ import {
   Users, CreditCard, TrendingDown, TrendingUp,
   ArrowUpRight, ArrowDownRight, DollarSign, Activity,
   PieChart as PieChartIcon, Heart, Calendar, Inbox,
-  AlertCircle, ChevronRight, Clock, MessageSquare
+  AlertCircle, ChevronRight, ChevronLeft, Clock, MessageSquare
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -38,7 +38,7 @@ const SkeletonCard = ({ delay = 0 }) => (
 /* ── KPI Card ── */
 const KpiCard = ({ label, value, unit, sub, subColor = '#10b981', icon: Icon, iconBg, iconColor, accent, delay = 0 }) => (
   <div
-    className="card overflow-hidden relative"
+    className="card kpi-card overflow-hidden relative"
     style={{
       ...(accent ? { background: accent, border: 'none' } : {}),
       animation: 'fadeUp 0.45s ease-out forwards',
@@ -123,13 +123,40 @@ const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pagamentos'); // pagamentos | mensagens
+  const [mesSelecionado, setMesSelecionado] = useState(new Date().getMonth() + 1);
+  const [anoSelecionado, setAnoSelecionado] = useState(new Date().getFullYear());
+  const [chartType, setChartType] = useState('area'); // 'area' | 'bar'
+  const [fluxoChartType, setFluxoChartType] = useState('bar'); // 'bar' | 'line'
 
-  useEffect(() => {
-    api.get('/dashboard/resumo')
+  const fetchDados = React.useCallback(() => {
+    setLoading(true);
+    api.get('/dashboard/resumo', { params: { ano: anoSelecionado, mes: mesSelecionado } })
       .then(res => setData(res.data.data))
       .catch(err => console.error('Erro ao carregar dashboard', err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [anoSelecionado, mesSelecionado]);
+
+  useEffect(() => {
+    fetchDados();
+  }, [fetchDados]);
+
+  const mesAnterior = () => {
+    if (mesSelecionado === 1) {
+      setMesSelecionado(12);
+      setAnoSelecionado(prev => prev - 1);
+    } else {
+      setMesSelecionado(prev => prev - 1);
+    }
+  };
+
+  const mesSeguinte = () => {
+    if (mesSelecionado === 12) {
+      setMesSelecionado(1);
+      setAnoSelecionado(prev => prev + 1);
+    } else {
+      setMesSelecionado(prev => prev + 1);
+    }
+  };
 
   if (loading) {
     return (
@@ -220,15 +247,59 @@ const Dashboard = () => {
           <div className="page-header-accent" />
         </div>
         <div
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
+          className="flex items-center gap-1 rounded-xl px-2.5 py-1.5"
           style={{
-            background: 'var(--primary-light)',
-            color: 'var(--primary)',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-sm)',
             animation: 'slideInRight 0.4s ease-out 0.1s both',
           }}
         >
-          <Calendar size={15} />
-          {new Date().toLocaleDateString('pt-PT', { year: 'numeric', month: 'long' })}
+          <button
+            type="button"
+            onClick={mesAnterior}
+            className="p-1 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
+            style={{ color: 'var(--text-3)', background: 'transparent', border: 'none' }}
+            title="Mês anterior"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          
+          <select
+            value={mesSelecionado}
+            onChange={(e) => setMesSelecionado(Number(e.target.value))}
+            className="bg-transparent border-none text-xs font-bold focus:outline-none cursor-pointer px-1 py-0.5"
+            style={{ color: 'var(--text-1)' }}
+          >
+            {MESES.map((nome, i) => (
+              <option key={i} value={i + 1} style={{ background: 'var(--surface)', color: 'var(--text-1)' }}>
+                {nome}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={anoSelecionado}
+            onChange={(e) => setAnoSelecionado(Number(e.target.value))}
+            className="bg-transparent border-none text-xs font-bold focus:outline-none cursor-pointer px-1 py-0.5"
+            style={{ color: 'var(--text-1)' }}
+          >
+            {[new Date().getFullYear() - 3, new Date().getFullYear() - 2, new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((ano) => (
+              <option key={ano} value={ano} style={{ background: 'var(--surface)', color: 'var(--text-1)' }}>
+                {ano}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={mesSeguinte}
+            className="p-1 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
+            style={{ color: 'var(--text-3)', background: 'transparent', border: 'none' }}
+            title="Mês seguinte"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
       </div>
 
@@ -313,41 +384,101 @@ const Dashboard = () => {
               </span>
               Fluxo Financeiro Mensal
             </h3>
-            <span
-              className="text-xs font-semibold px-3 py-1 rounded-full"
-              style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}
-            >
-              {new Date().getFullYear()}
-            </span>
+            
+            <div className="flex items-center gap-1.5 p-1 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <button
+                type="button"
+                onClick={() => setFluxoChartType('bar')}
+                className="text-[10px] font-bold px-2 py-1 rounded-md transition-all border-none cursor-pointer"
+                style={{
+                  background: fluxoChartType === 'bar' ? 'var(--surface)' : 'transparent',
+                  color: fluxoChartType === 'bar' ? 'var(--primary)' : 'var(--text-3)',
+                  boxShadow: fluxoChartType === 'bar' ? 'var(--shadow-sm)' : 'none',
+                }}
+              >
+                Barras
+              </button>
+              <button
+                type="button"
+                onClick={() => setFluxoChartType('line')}
+                className="text-[10px] font-bold px-2 py-1 rounded-md transition-all border-none cursor-pointer"
+                style={{
+                  background: fluxoChartType === 'line' ? 'var(--surface)' : 'transparent',
+                  color: fluxoChartType === 'line' ? 'var(--primary)' : 'var(--text-3)',
+                  boxShadow: fluxoChartType === 'line' ? 'var(--shadow-sm)' : 'none',
+                }}
+              >
+                Área
+              </button>
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={formattedFluxo} margin={{ top: 4, right: 4, left: -10, bottom: 0 }} barGap={3}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-              <XAxis
-                dataKey="mes"
-                tickFormatter={(v) => MESES[(v - 1)] || v}
-                axisLine={false} tickLine={false}
-                tick={{ fill: 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
-                dy={8}
-              />
-              <YAxis
-                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-                axisLine={false} tickLine={false}
-                tick={{ fill: 'var(--text-3)', fontSize: 11 }}
-              />
-              <RechartsTooltip
-                formatter={(v) => `${formatXOF(v)} XOF`}
-                labelFormatter={(v) => `Mês: ${MESES[(v - 1)] || v}`}
-                contentStyle={tooltipStyle}
-                cursor={{ fill: 'var(--surface-hover)', radius: 6 }}
-              />
-              <Legend
-                iconType="circle"
-                wrapperStyle={{ paddingTop: 16, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}
-              />
-              <Bar name="Receitas" dataKey="receitas" fill="#10b981" radius={[6, 6, 0, 0]} barSize={18} />
-              <Bar name="Despesas" dataKey="despesas" fill="#ef4444" radius={[6, 6, 0, 0]} barSize={18} />
-            </BarChart>
+            {fluxoChartType === 'bar' ? (
+              <BarChart data={formattedFluxo} margin={{ top: 4, right: 4, left: -10, bottom: 0 }} barGap={3}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis
+                  dataKey="mes"
+                  tickFormatter={(v) => MESES[(v - 1)] || v}
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
+                  dy={8}
+                />
+                <YAxis
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 11 }}
+                />
+                <RechartsTooltip
+                  formatter={(v) => `${formatXOF(v)} XOF`}
+                  labelFormatter={(v) => `Mês: ${MESES[(v - 1)] || v}`}
+                  contentStyle={tooltipStyle}
+                  cursor={{ fill: 'var(--surface-hover)', radius: 6 }}
+                />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: 16, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}
+                />
+                <Bar name="Receitas" dataKey="receitas" fill="#10b981" radius={[6, 6, 0, 0]} barSize={18} />
+                <Bar name="Despesas" dataKey="despesas" fill="#ef4444" radius={[6, 6, 0, 0]} barSize={18} />
+              </BarChart>
+            ) : (
+              <AreaChart data={formattedFluxo} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="fluxoReceitas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="fluxoDespesas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis
+                  dataKey="mes"
+                  tickFormatter={(v) => MESES[(v - 1)] || v}
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
+                  dy={8}
+                />
+                <YAxis
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 11 }}
+                />
+                <RechartsTooltip
+                  formatter={(v) => `${formatXOF(v)} XOF`}
+                  labelFormatter={(v) => `Mês: ${MESES[(v - 1)] || v}`}
+                  contentStyle={tooltipStyle}
+                />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: 16, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}
+                />
+                <Area name="Receitas" dataKey="receitas" stroke="#10b981" strokeWidth={2.5} fill="url(#fluxoReceitas)" dot={{ r: 4, strokeWidth: 0, fill: '#10b981' }} activeDot={{ r: 6 }} />
+                <Area name="Despesas" dataKey="despesas" stroke="#ef4444" strokeWidth={2.5} fill="url(#fluxoDespesas)" dot={{ r: 4, strokeWidth: 0, fill: '#ef4444' }} activeDot={{ r: 6 }} />
+              </AreaChart>
+            )}
           </ResponsiveContainer>
         </div>
 
@@ -439,75 +570,131 @@ const Dashboard = () => {
             >
               <CreditCard size={16} />
             </span>
-            Quotas Mensais — {new Date().getFullYear()}
+            Quotas Mensais — {anoSelecionado}
           </h3>
-          <span
-            className="text-xs font-semibold px-3 py-1 rounded-full"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}
-          >
-            Pagas vs Pendentes
-          </span>
+          
+          <div className="flex items-center gap-1.5 p-1 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <button
+              type="button"
+              onClick={() => setChartType('area')}
+              className="text-[10px] font-bold px-2 py-1 rounded-md transition-all border-none cursor-pointer"
+              style={{
+                background: chartType === 'area' ? 'var(--surface)' : 'transparent',
+                color: chartType === 'area' ? 'var(--primary)' : 'var(--text-3)',
+                boxShadow: chartType === 'area' ? 'var(--shadow-sm)' : 'none',
+              }}
+            >
+              Área
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartType('bar')}
+              className="text-[10px] font-bold px-2 py-1 rounded-md transition-all border-none cursor-pointer"
+              style={{
+                background: chartType === 'bar' ? 'var(--surface)' : 'transparent',
+                color: chartType === 'bar' ? 'var(--primary)' : 'var(--text-3)',
+                boxShadow: chartType === 'bar' ? 'var(--shadow-sm)' : 'none',
+              }}
+            >
+              Barras
+            </button>
+          </div>
         </div>
         {quotas_mensal.length > 0 ? (
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart
-              data={quotas_mensal.map(q => ({
-                mes: MESES[q.mes - 1] || q.mes,
-                Pagas: Number(q.pagas || 0),
-                Pendentes: Number(q.pendentes || 0),
-                'Valor (XOF)': Number(q.valor_pago || 0),
-              }))}
-              margin={{ top: 4, right: 4, left: -10, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorPagas" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorPendentes" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-              <XAxis
-                dataKey="mes"
-                axisLine={false} tickLine={false}
-                tick={{ fill: 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
-                dy={8}
-              />
-              <YAxis
-                axisLine={false} tickLine={false}
-                tick={{ fill: 'var(--text-3)', fontSize: 11 }}
-                allowDecimals={false}
-              />
-              <RechartsTooltip
-                contentStyle={tooltipStyle}
-                cursor={{ fill: 'var(--surface-hover)', radius: 6 }}
-              />
-              <Legend
-                iconType="circle"
-                wrapperStyle={{ paddingTop: 16, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="Pagas"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                fill="url(#colorPagas)"
-                dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
-                activeDot={{ r: 6 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="Pendentes"
-                stroke="#ef4444"
-                strokeWidth={2.5}
-                fill="url(#colorPendentes)"
-                dot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }}
-                activeDot={{ r: 6 }}
-              />
-            </AreaChart>
+            {chartType === 'area' ? (
+              <AreaChart
+                data={quotas_mensal.map(q => ({
+                  mes: MESES[q.mes - 1] || q.mes,
+                  Pagas: Number(q.pagas || 0),
+                  Pendentes: Number(q.pendentes || 0),
+                  'Valor (XOF)': Number(q.valor_pago || 0),
+                }))}
+                margin={{ top: 4, right: 4, left: -10, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorPagas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorPendentes" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis
+                  dataKey="mes"
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
+                  dy={8}
+                />
+                <YAxis
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 11 }}
+                  allowDecimals={false}
+                />
+                <RechartsTooltip
+                  contentStyle={tooltipStyle}
+                  cursor={{ fill: 'var(--surface-hover)', radius: 6 }}
+                />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: 16, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Pagas"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fill="url(#colorPagas)"
+                  dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Pendentes"
+                  stroke="#ef4444"
+                  strokeWidth={2.5}
+                  fill="url(#colorPendentes)"
+                  dot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }}
+                  activeDot={{ r: 6 }}
+                />
+              </AreaChart>
+            ) : (
+              <BarChart
+                data={quotas_mensal.map(q => ({
+                  mes: MESES[q.mes - 1] || q.mes,
+                  Pagas: Number(q.pagas || 0),
+                  Pendentes: Number(q.pendentes || 0),
+                }))}
+                margin={{ top: 4, right: 4, left: -10, bottom: 0 }}
+                barGap={3}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis
+                  dataKey="mes"
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
+                  dy={8}
+                />
+                <YAxis
+                  axisLine={false} tickLine={false}
+                  tick={{ fill: 'var(--text-3)', fontSize: 11 }}
+                  allowDecimals={false}
+                />
+                <RechartsTooltip
+                  contentStyle={tooltipStyle}
+                  cursor={{ fill: 'var(--surface-hover)', radius: 6 }}
+                />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: 16, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}
+                />
+                <Bar name="Pagas" dataKey="Pagas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={16} />
+                <Bar name="Pendentes" dataKey="Pendentes" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={16} />
+              </BarChart>
+            )}
           </ResponsiveContainer>
         ) : (
           <div className="flex items-center justify-center h-40" style={{ color: 'var(--text-3)' }}>

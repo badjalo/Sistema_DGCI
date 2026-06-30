@@ -74,6 +74,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         style={{
           width: sidebarWidth,
           background: 'var(--sidebar-bg)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           transition: 'width 0.28s cubic-bezier(0.4,0,0.2,1), transform 0.3s cubic-bezier(0.4,0,0.2,1)',
           flexShrink: 0,
           borderRight: '1px solid var(--sidebar-border)',
@@ -153,12 +155,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                       `}
                       style={{
                         background: isActive
-                          ? 'linear-gradient(135deg, var(--sidebar-active), rgba(59,111,245,0.8))'
+                          ? 'linear-gradient(135deg, var(--sidebar-active), #6366f1)'
                           : 'transparent',
-                        boxShadow: isActive ? '0 4px 16px rgba(59,111,245,0.3)' : 'none',
+                        boxShadow: isActive ? '0 8px 24px rgba(59,111,245,0.35), inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
                         color: isActive ? '#fff' : 'var(--sidebar-text)',
-                        transition: 'background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s',
-                        transform: 'translateX(0)',
+                        transition: 'background 0.25s, color 0.25s, box-shadow 0.25s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                        transform: isActive ? 'scale(1.02)' : 'none',
                       }}
                       onMouseEnter={e => {
                         if (!isActive) {
