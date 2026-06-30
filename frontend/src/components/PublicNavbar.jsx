@@ -35,11 +35,11 @@ const PublicNavbar = () => {
   }, [darkMode]);
 
   const navLinks = [
-    { label: 'Início', to: '/' },
+    { label: 'Início',      to: '/' },
     { label: 'O Sindicato', to: '/sindicato' },
-    { label: 'Notícias', to: '/noticias' },
-    { label: 'Documentos', to: '/documentos-publicos' },
-    { label: 'Contacto', to: '/contacto' },
+    { label: 'Notícias',    to: '/noticias' },
+    { label: 'Documentos',  to: '/documentos-publicos' },
+    { label: 'Contacto',    to: '/contacto' },
   ];
 
   return (

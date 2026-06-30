@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getBackendUrl } from '../services/api';
 import {
-    ChevronLeft, Users, Shield, Award, Building, Mail, Menu, X, Lock
+    ChevronLeft, Users, Shield, Award, Building, Mail, Menu, X, Lock, Target, Eye
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import PublicNavbar from '../components/PublicNavbar';
@@ -198,7 +198,58 @@ const Sindicato = () => {
                 </div>
             </section>
 
-            {/* ── 3. ORGANIGRAMA ────────────────────────────────────────────── */}
+            {/* ── 3. MISSÃO, VISÃO E VALORES ──────────────────────────────────── */}
+            <section className="py-20 bg-white border-t border-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-14">
+                        <div className="inline-flex items-center gap-2 bg-yellow-50 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wider border border-yellow-200">
+                            <Award size={12} /> Identidade Sindical
+                        </div>
+                        <h2 className="text-3xl font-black text-[#0f1f42] mb-3">Missão, Visão e Valores</h2>
+                        <p className="text-gray-500 text-sm max-w-xl mx-auto">
+                            Os pilares que orientam a nossa ação e definem o compromisso do SF-DGCI com os seus membros.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {[
+                            {
+                                icon: Target,
+                                color: 'text-blue-600',
+                                bg: 'bg-blue-50',
+                                border: 'border-blue-100 hover:border-blue-300',
+                                title: 'Missão',
+                                text: 'Defender os direitos e interesses dos funcionários da DGCI, promovendo condições de trabalho dignas e o desenvolvimento profissional dos seus membros.'
+                            },
+                            {
+                                icon: Eye,
+                                color: 'text-yellow-600',
+                                bg: 'bg-yellow-50',
+                                border: 'border-yellow-100 hover:border-yellow-300',
+                                title: 'Visão',
+                                text: 'Ser uma organização sindical de referência na Guiné-Bissau, reconhecida pela sua capacidade de diálogo, transparência e defesa da classe trabalhadora.'
+                            },
+                            {
+                                icon: Shield,
+                                color: 'text-green-600',
+                                bg: 'bg-green-50',
+                                border: 'border-green-100 hover:border-green-300',
+                                title: 'Valores',
+                                text: 'Democracia, solidariedade, transparência, integridade e responsabilidade social são os pilares que guiam todas as nossas ações.'
+                            },
+                        ].map(({ icon: Icon, color, bg, border, title, text }) => (
+                            <div key={title} className={`group bg-white rounded-2xl border ${border} p-8 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center text-center`}>
+                                <div className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                                    <Icon size={26} className={color} />
+                                </div>
+                                <h3 className="font-black text-[#0f1f42] text-lg mb-3">{title}</h3>
+                                <p className="text-gray-500 text-sm leading-relaxed">{text}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 4. ORGANIGRAMA ────────────────────────────────────────────── */}
             <section className="py-20 bg-slate-50/50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">

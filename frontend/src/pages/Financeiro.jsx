@@ -154,52 +154,53 @@ const Financeiro = () => {
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Receitas</p>
-                <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumo.receitas).replace('XOF', '').trim()}</h3>
-                <p className="text-xs text-green-600 font-medium mt-2 flex items-center gap-1">
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Receitas</p>
+                <h3 className="text-2xl font-extrabold mt-1.5" style={{ color: 'var(--text-1)' }}>{formatXOF(resumo.receitas).replace('XOF', '').trim()}</h3>
+                <p className="text-xs font-semibold mt-2.5 flex items-center gap-1" style={{ color: 'var(--success)' }}>
                   <ArrowUpRight size={14} /> Total anual
                 </p>
               </div>
-              <div className="bg-green-100 p-3 rounded-lg text-green-600"><ArrowUpRight size={20} /></div>
+              <div className="p-3 rounded-xl" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}><ArrowUpRight size={20} /></div>
             </div>
           </div>
 
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Despesas</p>
-                <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumo.despesas).replace('XOF', '').trim()}</h3>
-                <p className="text-xs text-red-600 font-medium mt-2 flex items-center gap-1">
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Despesas</p>
+                <h3 className="text-2xl font-extrabold mt-1.5" style={{ color: 'var(--text-1)' }}>{formatXOF(resumo.despesas).replace('XOF', '').trim()}</h3>
+                <p className="text-xs font-semibold mt-2.5 flex items-center gap-1" style={{ color: 'var(--danger)' }}>
                   <ArrowDownRight size={14} /> Total anual
                 </p>
               </div>
-              <div className="bg-red-100 p-3 rounded-lg text-red-600"><ArrowDownRight size={20} /></div>
+              <div className="p-3 rounded-xl" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}><ArrowDownRight size={20} /></div>
             </div>
           </div>
 
-          <div className="card bg-gradient-to-br from-blue-600 to-blue-700 text-white">
-            <div className="flex justify-between items-start">
+          <div className="card text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, #6366f1 100%)', border: 'none' }}>
+            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white, transparent)' }} />
+            <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs font-semibold opacity-80 uppercase tracking-wider mb-1">Saldo</p>
-                <h3 className="text-2xl font-bold text-white">{formatXOF(resumo.saldo).replace('XOF', '').trim()}</h3>
-                <p className="text-xs opacity-80 font-medium mt-2 flex items-center gap-1">
+                <p className="text-xs font-bold uppercase tracking-wider opacity-85">Saldo</p>
+                <h3 className="text-2xl font-extrabold mt-1.5">{formatXOF(resumo.saldo).replace('XOF', '').trim()}</h3>
+                <p className="text-xs font-semibold mt-2.5 flex items-center gap-1 opacity-85">
                   <DollarSign size={14} /> Balanço anual
                 </p>
               </div>
-              <div className="bg-white bg-opacity-20 p-3 rounded-lg"><DollarSign size={20} /></div>
+              <div className="bg-white/20 p-3 rounded-xl"><DollarSign size={20} /></div>
             </div>
           </div>
 
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Dívida acumulada</p>
-                <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumo.divida).replace('XOF', '').trim()}</h3>
-                <p className="text-xs text-red-600 font-medium mt-2 flex items-center gap-1">
-                  <AlertCircle size={14} /> Dívida total de quotas pendentes
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Dívida acumulada</p>
+                <h3 className="text-2xl font-extrabold mt-1.5" style={{ color: 'var(--text-1)' }}>{formatXOF(resumo.divida).replace('XOF', '').trim()}</h3>
+                <p className="text-xs font-semibold mt-2.5 flex items-center gap-1" style={{ color: 'var(--danger)' }}>
+                  <AlertCircle size={14} /> Quotas pendentes
                 </p>
               </div>
-              <div className="bg-red-100 p-3 rounded-lg text-red-600"><AlertCircle size={20} /></div>
+              <div className="p-3 rounded-xl" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}><AlertCircle size={20} /></div>
             </div>
           </div>
         </div>
@@ -217,43 +218,40 @@ const Financeiro = () => {
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Receitas (Mês)</p>
-                <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumoMes.receitas).replace('XOF', '').trim()}</h3>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Receitas (Mês)</p>
+                <h3 className="text-2xl font-extrabold mt-1.5" style={{ color: 'var(--text-1)' }}>{formatXOF(resumoMes.receitas).replace('XOF', '').trim()}</h3>
               </div>
-              <div className="bg-green-100 p-2 rounded-lg text-green-600"><ArrowUpRight size={18} /></div>
+              <div className="p-2.5 rounded-xl" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}><ArrowUpRight size={18} /></div>
             </div>
           </div>
 
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Despesas (Mês)</p>
-                <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumoMes.despesas).replace('XOF', '').trim()}</h3>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Despesas (Mês)</p>
+                <h3 className="text-2xl font-extrabold mt-1.5" style={{ color: 'var(--text-1)' }}>{formatXOF(resumoMes.despesas).replace('XOF', '').trim()}</h3>
               </div>
-              <div className="bg-red-100 p-2 rounded-lg text-red-600"><ArrowDownRight size={18} /></div>
+              <div className="p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}><ArrowDownRight size={18} /></div>
             </div>
           </div>
 
-          <div className="card bg-blue-50 border-blue-200">
+          <div className="card" style={{ borderColor: 'var(--primary)', background: 'var(--primary-light)' }}>
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">Saldo (Mês)</p>
-                <h3 className="text-2xl font-bold text-blue-900">{formatXOF(resumoMes.saldo).replace('XOF', '').trim()}</h3>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--primary)' }}>Saldo (Mês)</p>
+                <h3 className="text-2xl font-extrabold mt-1.5" style={{ color: 'var(--primary)' }}>{formatXOF(resumoMes.saldo).replace('XOF', '').trim()}</h3>
               </div>
-              <div className="bg-blue-200 p-2 rounded-lg text-blue-600"><DollarSign size={18} /></div>
+              <div className="p-2.5 rounded-xl" style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid rgba(59,111,245,0.2)' }}><DollarSign size={18} /></div>
             </div>
           </div>
 
           <div className="card">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Dívida do mês</p>
-                <h3 className="text-2xl font-bold text-slate-900">{formatXOF(resumoMes.divida).replace('XOF', '').trim()}</h3>
-                <p className="text-xs text-red-600 font-medium mt-2 flex items-center gap-1">
-                  <AlertCircle size={14} /> Dívida apenas para o mês selecionado
-                </p>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>Dívida do mês</p>
+                <h3 className="text-2xl font-extrabold mt-1.5" style={{ color: 'var(--text-1)' }}>{formatXOF(resumoMes.divida).replace('XOF', '').trim()}</h3>
               </div>
-              <div className="bg-amber-100 p-2 rounded-lg text-amber-600"><AlertCircle size={18} /></div>
+              <div className="p-2.5 rounded-xl" style={{ background: 'var(--warning-bg)', color: 'var(--warning)' }}><AlertCircle size={18} /></div>
             </div>
           </div>
         </div>
@@ -282,39 +280,37 @@ const Financeiro = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto -mx-6 border-t border-slate-200 pt-4">
-            <table className="w-full">
+          <div className="table-container mt-4">
+            <table className="table">
               <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Data</th>
-                  <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Descrição</th>
-                  <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Categoria</th>
-                  <th className="text-left text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Método Pag.</th>
-                  <th className="text-right text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Valor</th>
-                  <th className="text-center text-xs font-semibold text-slate-600 uppercase tracking-wider px-6 py-3">Tipo</th>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Método Pag.</th>
+                  <th className="text-right">Valor</th>
+                  <th className="text-center">Tipo</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr><td colSpan={6} className="text-center py-8"><div className="spinner mx-auto"></div></td></tr>
                 ) : transacoesFiltradas.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-slate-500">Nenhum movimento encontrado para {monthNames[mesSelecionado - 1]} {anoSelecionado}.</td></tr>
+                  <tr><td colSpan={6} className="text-center py-8" style={{ color: 'var(--text-3)' }}>Nenhum movimento encontrado para {monthNames[mesSelecionado - 1]} {anoSelecionado}.</td></tr>
                 ) : (
                   transacoesFiltradas.map((t) => (
-                    <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
-                      <td className="px-6 py-3 text-sm text-slate-900 font-medium">{new Date(t.data_movimento || t.criado_em).toLocaleDateString('pt-GW')}</td>
-                      <td className="px-6 py-3 text-sm text-slate-700">{t.descricao}</td>
-                      <td className="px-6 py-3 text-sm"><span className="text-slate-600">{t.categoria_nome || 'Geral'}</span></td>
-                      <td className="px-6 py-3 text-sm">
-                        <span className="text-slate-600">{t.metodo_pagamento || 'N/D'}</span>
-                      </td>
-                      <td className="px-6 py-3 text-sm font-bold text-right">
+                    <tr key={t.id}>
+                      <td className="font-medium">{new Date(t.data_movimento || t.criado_em).toLocaleDateString('pt-GW')}</td>
+                      <td>{t.descricao}</td>
+                      <td>{t.categoria_nome || 'Geral'}</td>
+                      <td>{t.metodo_pagamento || 'N/D'}</td>
+                      <td className="font-bold text-right">
                         <span className={t.tipo === 'receita' ? 'text-green-600' : 'text-red-600'}>
                           {t.tipo === 'receita' ? '+' : '-'} {formatXOF(t.valor).replace('XOF', '').trim()}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-center">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${t.tipo === 'receita' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      <td className="text-center">
+                        <span className={`badge ${t.tipo === 'receita' ? 'badge-success' : 'badge-danger'}`}>
                           {t.tipo === 'receita' ? 'Receita' : 'Despesa'}
                         </span>
                       </td>

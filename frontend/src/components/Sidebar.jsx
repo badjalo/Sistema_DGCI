@@ -68,14 +68,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         />
       )}
 
-      {/* Mobile toggle button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white shadow-lg transition-transform active:scale-90"
-        style={{ background: 'var(--sidebar-bg)' }}
-      >
-        {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-      </button>
 
       {/* Sidebar */}
       <aside

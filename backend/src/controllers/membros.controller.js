@@ -481,5 +481,156 @@ const obterCartoesLote = async (req, res, next) => {
   }
 };
 
-module.exports = { listar, obter, criar, atualizar, eliminar, pagamentosMembro, estatisticas, obterCartao, obterCartoesLote, nextNumero, obterQR, obterQRByNumero };
+/** GET /api/membros/:id/declaracao */
+const declaracao = async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT m.*, d.nome as departamento_nome, c.nome as cargo_nome
+       FROM membros m
+       LEFT JOIN departamentos d ON d.id = m.departamento_id
+       LEFT JOIN cargos c ON c.id = m.cargo_id
+       WHERE m.id = $1`,
+      [req.params.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'Membro não encontrado' });
+    }
+
+    const membro = result.rows[0];
+
+    // Fetch system configurations
+    const configRes = await query('SELECT chave, valor FROM configuracoes').catch(() => ({ rows: [] }));
+    const configs = {};
+    configRes.rows.forEach(r => { configs[r.chave] = r.valor; });
+
+    const PDFDocument = require('pdfkit');
+    const fs = require('fs');
+    const path = require('path');
+    const assetsDir = path.join(__dirname, '../../uploads/assets');
+
+    // Logo path
+    const logoJpeg = path.join(assetsDir, 'logo.jpeg');
+    const logoPng = path.join(assetsDir, 'logo.png');
+    const logoPath = fs.existsSync(logoJpeg) ? logoJpeg : (fs.existsSync(logoPng) ? logoPng : null);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="declaracao_${membro.numero_membro}.pdf"`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 60, info: { Title: 'Declaração de Filiação Sindical' } });
+    doc.pipe(res);
+
+    const pageW = doc.page.width;
+    const margin = 60;
+    const contentW = pageW - margin * 2;
+
+    // ── HEADER ──────────────────────────────────────────────────────────
+    if (logoPath) {
+      try {
+        doc.image(logoPath, margin, 40, { width: 60 });
+      } catch (e) {}
+    }
+
+    doc.fillColor('#003B8E').font('Helvetica-Bold').fontSize(11);
+    doc.text('SINDICATO DOS FUNCIONÁRIOS DA', margin + 70, 45, { width: contentW - 70 });
+    doc.text('DIREÇÃO-GERAL DAS CONTRIBUIÇÕES E IMPOSTOS', { width: contentW - 70 });
+
+    doc.fillColor('#1748b8').font('Helvetica').fontSize(8.5);
+    doc.text(`${configs.sede || 'Av. João Bernardo Vieira, Edifício da DGCI, Bissau'}`, margin + 70, 78, { width: contentW - 70 });
+    doc.text(`${configs.telefone || '+245 955 371 498'} | ${configs.email || 'sf-dgci@dgci.mef.gw'}`, { width: contentW - 70 });
+
+    // Divider
+    doc.strokeColor('#003B8E').lineWidth(1.5).moveTo(margin, 112).lineTo(pageW - margin, 112).stroke();
+    doc.strokeColor('#1748b8').lineWidth(0.5).moveTo(margin, 115).lineTo(pageW - margin, 115).stroke();
+
+    // ── TITLE ──────────────────────────────────────────────────────────
+    doc.fillColor('#003B8E').font('Helvetica-Bold').fontSize(16);
+    doc.text('DECLARAÇÃO DE FILIAÇÃO SINDICAL', margin, 135, { align: 'center', width: contentW });
+
+    doc.fillColor('#1748b8').font('Helvetica').fontSize(9);
+    doc.text(`Ref.ª: ${membro.numero_membro} | Emitido em ${new Date().toLocaleDateString('pt-PT', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, 158, { align: 'center', width: contentW });
+
+    // Thin line under title
+    doc.strokeColor('#e0e8f5').lineWidth(1).moveTo(margin, 175).lineTo(pageW - margin, 175).stroke();
+
+    // ── BODY ──────────────────────────────────────────────────────────
+    const cargo = membro.cargo_nome || membro.funcao_cargo || 'Funcionário';
+    const dept = membro.departamento_nome || 'Serviços da DGCI';
+    const admissao = membro.data_admissao ? new Date(membro.data_admissao).toLocaleDateString('pt-PT', { year: 'numeric', month: 'long', day: 'numeric' }) : 'data desconhecida';
+    const nomeSindicato = configs.nome_sindicato || 'Sindicato dos Funcionários da Direção-Geral das Contribuições e Impostos';
+
+    doc.fillColor('#062752').font('Helvetica').fontSize(11).lineGap(4);
+    const body = [
+      `O ${nomeSindicato} (SF-DGCI), com sede em Bissau, declara para os devidos efeitos legais que:`,
+      '',
+      `     ${membro.nome_completo}`,
+      '',
+      `portador(a) do ${membro.nif ? 'NIF n.º ' + membro.nif + ' e do ' : ''}BI/Passaporte n.º ${membro.bi_passaporte}, exercendo as funções de ${cargo} no ${dept}, é membro filiado neste Sindicato desde ${admissao}, encontrando-se inscrito(a) sob o número de membro`,
+      '',
+      `     ${membro.numero_membro}`,
+      '',
+      `e em situação de ${membro.estado === 'ativo' ? 'plena regularidade' : membro.estado} relativamente ao cumprimento das suas obrigações estatutárias.`,
+      '',
+      `A presente declaração é emitida a pedido do(a) interessado(a), para os fins que entender convenientes.`,
+    ];
+
+    let textY = 195;
+    for (const line of body) {
+      const isBold = line.trim().startsWith(membro.nome_completo) || line.trim().startsWith(membro.numero_membro);
+      doc.font(isBold ? 'Helvetica-Bold' : 'Helvetica').fontSize(isBold ? 12 : 11);
+      if (isBold) {
+        doc.fillColor('#003B8E');
+      } else {
+        doc.fillColor('#062752');
+      }
+      doc.text(line || ' ', margin, textY, { width: contentW, lineGap: 4 });
+      textY = doc.y + (line === '' ? 6 : 4);
+    }
+
+    // ── SIGNATURE BLOCK ────────────────────────────────────────────────
+    const sigY = Math.max(textY + 40, 560);
+
+    // Location and date
+    doc.fillColor('#062752').font('Helvetica').fontSize(11);
+    const dataEmissao = new Date().toLocaleDateString('pt-PT', { year: 'numeric', month: 'long', day: 'numeric' });
+    doc.text(`Bissau, ${dataEmissao}`, margin, sigY, { align: 'right', width: contentW });
+
+    // Signature area
+    const sigBlockY = sigY + 40;
+
+    // Left sig block - O Secretário-Geral
+    const presidenteSigPath = path.join(assetsDir, 'assinatura_presidente.png');
+    if (fs.existsSync(presidenteSigPath)) {
+      try {
+        doc.image(presidenteSigPath, margin + 20, sigBlockY - 40, { width: 120, height: 50 });
+      } catch (e) {}
+    }
+
+    doc.strokeColor('#062752').lineWidth(0.5).moveTo(margin, sigBlockY).lineTo(margin + 200, sigBlockY).stroke();
+    doc.fillColor('#062752').font('Helvetica-Bold').fontSize(9.5);
+    doc.text('O Presidente do Sindicato', margin, sigBlockY + 6, { width: 200, align: 'center' });
+    doc.font('Helvetica').fontSize(8.5).fillColor('#1748b8');
+    doc.text(configs.nome_sindicato ? 'SF-DGCI' : 'SF-DGCI', margin, sigBlockY + 20, { width: 200, align: 'center' });
+
+    // ── FOOTER ────────────────────────────────────────────────────────
+    const footerY = doc.page.height - 60;
+    doc.strokeColor('#e0e8f5').lineWidth(1).moveTo(margin, footerY).lineTo(pageW - margin, footerY).stroke();
+
+    doc.fillColor('#8b97b0').font('Helvetica').fontSize(7.5);
+    doc.text(
+      'Este documento é emitido eletronicamente pelo Sistema de Gestão Sindical (SF-DGCI) e tem validade legal sem necessidade de assinatura autógrafa adicional.',
+      margin, footerY + 8, { align: 'center', width: contentW }
+    );
+    doc.text(
+      `Emitido pelo Sistema em ${new Date().toLocaleString('pt-PT')} | Verificar autenticidade em: ${configs.website || 'www.sindicatodgci.gw'}`,
+      margin, footerY + 20, { align: 'center', width: contentW }
+    );
+
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { listar, obter, criar, atualizar, eliminar, pagamentosMembro, estatisticas, obterCartao, obterCartoesLote, nextNumero, obterQR, obterQRByNumero, declaracao };
 

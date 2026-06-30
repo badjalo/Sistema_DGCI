@@ -95,9 +95,11 @@ const removeSensitiveFields = (obj, sensitiveFields, user) => {
 
         // Limpar recursivamente objetos aninhados
         if (typeof value === 'object' && value !== null) {
-            if (Array.isArray(value)) {
+            if (value instanceof Date) {
+                clean[key] = value;
+            } else if (Array.isArray(value)) {
                 clean[key] = value.map(item =>
-                    typeof item === 'object' ? removeSensitiveFields(item, sensitiveFields, user) : item
+                    typeof item === 'object' && item !== null ? (item instanceof Date ? item : removeSensitiveFields(item, sensitiveFields, user)) : item
                 );
             } else {
                 clean[key] = removeSensitiveFields(value, sensitiveFields, user);

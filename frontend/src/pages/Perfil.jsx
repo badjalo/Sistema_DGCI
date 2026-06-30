@@ -144,7 +144,7 @@ const Perfil = () => {
         <div className="md:col-span-1 space-y-4">
           <div className="card text-center p-5 flex flex-col items-center">
             <div className="relative group">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-indigo-500/30 flex items-center justify-center bg-zinc-800">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-indigo-500/30 flex items-center justify-center" style={{ background: 'var(--border)' }}>
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -163,7 +163,7 @@ const Perfil = () => {
               {email}
             </p>
             <div className="mt-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-block"
-              style={{ color: '#6366f1', background: 'rgba(99,102,241,0.1)' }}>
+              style={{ color: 'var(--primary)', background: 'var(--primary-light)' }}>
               {user?.perfil}
             </div>
           </div>
@@ -173,7 +173,7 @@ const Perfil = () => {
               onClick={() => setActiveTab('geral')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors text-left"
               style={{
-                background: activeTab === 'geral' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                background: activeTab === 'geral' ? 'var(--primary-light)' : 'transparent',
                 color: activeTab === 'geral' ? 'var(--primary)' : 'var(--text-3)',
               }}
             >
@@ -184,7 +184,7 @@ const Perfil = () => {
               onClick={() => setActiveTab('seguranca')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors text-left"
               style={{
-                background: activeTab === 'seguranca' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                background: activeTab === 'seguranca' ? 'var(--primary-light)' : 'transparent',
                 color: activeTab === 'seguranca' ? 'var(--primary)' : 'var(--text-3)',
               }}
             >
@@ -199,7 +199,7 @@ const Perfil = () => {
           {activeTab === 'geral' ? (
             <div className="card p-6 space-y-6">
               <div>
-                <h3 className="font-extrabold text-base text-white">Dados da Conta</h3>
+                <h3 className="font-extrabold text-base" style={{ color: 'var(--text-1)' }}>Dados da Conta</h3>
                 <p className="text-xs" style={{ color: 'var(--text-3)' }}>Mantenha as suas informações pessoais atualizadas.</p>
               </div>
 
@@ -279,7 +279,7 @@ const Perfil = () => {
           ) : (
             <div className="card p-6 space-y-6">
               <div>
-                <h3 className="font-extrabold text-base text-white">Alterar Palavra-passe</h3>
+                <h3 className="font-extrabold text-base" style={{ color: 'var(--text-1)' }}>Alterar Palavra-passe</h3>
                 <p className="text-xs" style={{ color: 'var(--text-3)' }}>Aconselhamos a mudar a sua senha regularmente para sua proteção.</p>
               </div>
 
@@ -299,7 +299,8 @@ const Perfil = () => {
                     <button
                       type="button"
                       onClick={() => setShowCurrent(!showCurrent)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:text-white"
+                      style={{ color: 'var(--text-3)' }}
                     >
                       {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
@@ -321,7 +322,8 @@ const Perfil = () => {
                     <button
                       type="button"
                       onClick={() => setShowNew(!showNew)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:text-white"
+                      style={{ color: 'var(--text-3)' }}
                     >
                       {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
@@ -350,7 +352,8 @@ const Perfil = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:text-white"
+                      style={{ color: 'var(--text-3)' }}
                     >
                       {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>

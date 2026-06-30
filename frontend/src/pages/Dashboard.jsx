@@ -190,10 +190,13 @@ const Dashboard = () => {
     borderRadius: '12px',
     border: '1px solid var(--border)',
     background: 'var(--surface)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
     color: 'var(--text-1)',
     boxShadow: 'var(--shadow-lg)',
     fontSize: '13px',
     fontWeight: 600,
+    padding: '10px 14px',
   };
 
   return (

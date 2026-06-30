@@ -122,6 +122,7 @@ router.get('/', authenticate, authorize('membros:read'), ctrl.listar);
 router.get('/next-numero', authenticate, authorize('membros:create'), ctrl.nextNumero);
 router.post('/cartao/lote', authenticate, authorize('membros:read'), ctrl.obterCartoesLote);
 router.get('/:id/cartao', authenticate, authorize('membros:read'), ctrl.obterCartao);
+router.get('/:id/declaracao', authenticate, authorize('membros:read'), ctrl.declaracao);
 router.get('/:id/qr', authenticate, authorize('membros:read'), ctrl.obterQR);
 router.get('/qr/numero/:numero', authenticate, authorize('membros:read'), ctrl.obterQRByNumero);
 router.get('/:id/pagamentos', authenticate, authorize('membros:read', 'quotas:read'), ctrl.pagamentosMembro);

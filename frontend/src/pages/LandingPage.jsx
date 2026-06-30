@@ -4,10 +4,12 @@ import api, { getBackendUrl } from '../services/api';
 import {
   Star, Shield, Users, FileText, CreditCard, BarChart3,
   Bell, Settings, CheckCircle, ArrowRight, Menu, X,
-  Building2, Phone, Mail, MapPin, Zap, Lock, Globe, Award, Calendar, Heart, Tag, Download
+  Building2, Phone, Mail, MapPin, Lock, Globe, Award, Calendar, Heart, Tag, Download,
+  Send
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import PublicNavbar from '../components/PublicNavbar';
+import { toast } from 'react-hot-toast';
 
 // ─── ANIMATED COUNTER HOOK ───────────────────────────────────────────────────
 const useCountUp = (target, duration = 1800, enabled = false) => {
@@ -562,6 +564,180 @@ const DocumentsSection = () => {
           >
             Ver Todos os Documentos <ArrowRight size={16} />
           </Link>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ─── FEATURES SECTION ───────────────────────────────────────────────────────
+const FeaturesSection = () => {
+  const features = [
+    { icon: Users, color: 'blue', title: 'Gestão de Membros', desc: 'Registo completo de filiados, dados pessoais, categorias e histórico de atividade.' },
+    { icon: CreditCard, color: 'green', title: 'Controlo de Quotas', desc: 'Acompanhe pagamentos, gere recibos e mantenha o histórico financeiro de cada membro.' },
+    { icon: FileText, color: 'yellow', title: 'Documentos Digitais', desc: 'Biblioteca digital de estatutos, atas, circulares e regulamentos acessíveis 24/7.' },
+    { icon: Vote, color: 'purple', title: 'Votações & Sondagens', desc: 'Consultas democráticas online com resultados em tempo real e histórico de participação.' },
+    { icon: Bell, color: 'orange', title: 'Comunicados Oficiais', desc: 'Envio e publicação de avisos, convocações e informações para todos os membros.' },
+    { icon: BarChart3, color: 'teal', title: 'Relatórios Financeiros', desc: 'Transparência total com relatórios de receitas, despesas, saldo e fundo social.' },
+  ];
+
+  const colorMap = {
+    blue:   { bg: 'bg-blue-50 dark:bg-blue-900/20',   icon: 'text-blue-600 dark:text-blue-400',   border: 'group-hover:border-blue-300' },
+    green:  { bg: 'bg-green-50 dark:bg-green-900/20',  icon: 'text-green-600 dark:text-green-400',  border: 'group-hover:border-green-300' },
+    yellow: { bg: 'bg-yellow-50 dark:bg-yellow-900/20',icon: 'text-yellow-600 dark:text-yellow-400',border: 'group-hover:border-yellow-300' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-900/20',icon: 'text-purple-600 dark:text-purple-400',border: 'group-hover:border-purple-300' },
+    orange: { bg: 'bg-orange-50 dark:bg-orange-900/20',icon: 'text-orange-600 dark:text-orange-400',border: 'group-hover:border-orange-300' },
+    teal:   { bg: 'bg-teal-50 dark:bg-teal-900/20',   icon: 'text-teal-600 dark:text-teal-400',   border: 'group-hover:border-teal-300' },
+  };
+
+  return (
+    <section id="features" className="py-24 bg-gray-50 dark:bg-[#161b27]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold px-4 py-1.5 rounded-full mb-4 tracking-widest uppercase">
+            <Zap size={12} /> Funcionalidades
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black text-[#0f1f42] dark:text-white mb-4">Tudo o que precisa, num só sistema</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-base max-w-xl mx-auto">Uma plataforma completa desenhada especificamente para a gestão sindical da DGCI.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map(({ icon: Icon, color, title, desc }) => {
+            const c = colorMap[color];
+            return (
+              <div key={title} className={`group bg-white dark:bg-[#0d1117] border border-gray-100 dark:border-slate-800 rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${c.border}`}>
+                <div className={`w-12 h-12 ${c.bg} rounded-xl flex items-center justify-center mb-5`}>
+                  <Icon size={22} className={c.icon} />
+                </div>
+                <h3 className="font-bold text-[#0f1f42] dark:text-white text-base mb-2">{title}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">{desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ─── ABOUT SECTION ──────────────────────────────────────────────────────────
+const AboutSection = () => {
+  const pillars = [
+    { icon: Target,    color: 'text-blue-500',   bg: 'bg-blue-50 dark:bg-blue-900/20',   title: 'Missão',  text: 'Defender os direitos e interesses dos funcionários da DGCI, promovendo condições de trabalho dignas e o desenvolvimento profissional dos seus membros.' },
+    { icon: Eye,       color: 'text-yellow-500',  bg: 'bg-yellow-50 dark:bg-yellow-900/20',title: 'Visão',   text: 'Ser uma organização sindical de referência na Guiné-Bissau, reconhecida pela sua capacidade de diálogo, transparência e defesa da classe trabalhadora.' },
+    { icon: Award,     color: 'text-green-500',   bg: 'bg-green-50 dark:bg-green-900/20', title: 'Valores', text: 'Democracia, solidariedade, transparência, integridade e responsabilidade social são os pilares que guiam todas as nossas ações.' },
+  ];
+  return (
+    <section id="sobre" className="py-24 bg-white dark:bg-[#0d1117]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold px-4 py-1.5 rounded-full mb-5 tracking-widest uppercase">
+              <Building2 size={12} /> Sobre o Sindicato
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-[#0f1f42] dark:text-white mb-5 leading-tight">
+              Unidos pela defesa dos <span className="text-yellow-500">nossos direitos</span>
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-base leading-relaxed mb-6">
+              O Sindicato dos Funcionários da Direção Geral das Contribuições e Impostos (SF-DGCI) é a organização que representa os trabalhadores da DGCI na Guiné-Bissau, promovendo a dignidade, os direitos e o bem-estar dos seus membros.
+            </p>
+            <p className="text-gray-500 dark:text-gray-400 text-base leading-relaxed mb-8">
+              Através desta plataforma digital, modernizamos a gestão sindical, garantindo total transparência, participação democrática e comunicação eficaz entre a direção e os membros.
+            </p>
+            <Link to="/sindicato" className="inline-flex items-center gap-2 bg-[#1a2f5e] hover:bg-[#0f1f42] text-white font-bold text-sm px-6 py-3 rounded-xl transition-all duration-200">
+              Saber mais <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div className="space-y-5">
+            {pillars.map(({ icon: Icon, color, bg, title, text }) => (
+              <div key={title} className="flex gap-4 p-5 bg-gray-50 dark:bg-[#161b27] rounded-2xl border border-gray-100 dark:border-slate-800">
+                <div className={`w-11 h-11 ${bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                  <Icon size={20} className={color} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-[#0f1f42] dark:text-white text-sm mb-1">{title}</h4>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed">{text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ─── CONTACT SECTION ────────────────────────────────────────────────────────
+const ContactSection = () => {
+  const [form, setForm] = useState({ nome: '', email: '', mensagem: '' });
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.nome || !form.email || !form.mensagem) return toast.error('Preencha todos os campos.');
+    setSending(true);
+    try {
+      await api.post('/contacto', form);
+      toast.success('Mensagem enviada com sucesso! Entraremos em contacto brevemente.');
+      setForm({ nome: '', email: '', mensagem: '' });
+    } catch {
+      toast.error('Erro ao enviar mensagem. Tente novamente.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <section id="contacto" className="py-24 bg-gray-50 dark:bg-[#161b27]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold px-4 py-1.5 rounded-full mb-5 tracking-widest uppercase">
+              <Mail size={12} /> Contacto
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-[#0f1f42] dark:text-white mb-5">Fale connosco</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-base leading-relaxed mb-8">
+              Tem alguma dúvida, sugestão ou pretende mais informações? Envie-nos uma mensagem e responderemos brevemente.
+            </p>
+            <div className="space-y-4">
+              {[
+                { icon: MapPin, label: 'Av. João Bernardo Vieira, Edificio da DGCI, Bissau' },
+                { icon: Mail,   label: 'sf-dgci@dgci.mef.gw' },
+                { icon: Phone,  label: '+245 955 371 498' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-3 text-gray-600 dark:text-gray-400 text-sm">
+                  <div className="w-9 h-9 bg-yellow-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon size={15} className="text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-[#0d1117] rounded-2xl border border-gray-100 dark:border-slate-800 p-8 space-y-5 shadow-sm">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">Nome Completo</label>
+              <input type="text" required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-[#161b27] text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                placeholder="O seu nome" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">Email</label>
+              <input type="email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-[#161b27] text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                placeholder="email@dgci.mef.gw" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">Mensagem</label>
+              <textarea rows={5} required value={form.mensagem} onChange={e => setForm({...form, mensagem: e.target.value})}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-[#161b27] text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+                placeholder="Escreva a sua mensagem..." />
+            </div>
+            <button type="submit" disabled={sending}
+              className="w-full bg-[#1a2f5e] hover:bg-[#0f1f42] disabled:opacity-60 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm">
+              {sending ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={15} />}
+              {sending ? 'A enviar...' : 'Enviar Mensagem'}
+            </button>
+          </form>
         </div>
       </div>
     </section>

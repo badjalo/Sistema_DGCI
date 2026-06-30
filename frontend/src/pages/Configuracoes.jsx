@@ -101,22 +101,22 @@ const Configuracoes = () => {
       <p className="text-gray-500 text-sm mt-1 mb-6">Gerir preferências e parâmetros do sistema</p>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
+      <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto scrollbar-none pb-0.5">
         <button 
           onClick={() => setActiveTab('geral')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-t-lg transition-colors ${activeTab === 'geral' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'geral' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white'}`}
         >
           Geral
         </button>
         <button 
           onClick={() => setActiveTab('perfil')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-t-lg transition-colors ${activeTab === 'perfil' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'perfil' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white'}`}
         >
           Perfil
         </button>
         <button 
           onClick={() => setActiveTab('permissoes')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-t-lg transition-colors ${activeTab === 'permissoes' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-t-lg transition-colors whitespace-nowrap ${activeTab === 'permissoes' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white'}`}
         >
           Permissões
         </button>
